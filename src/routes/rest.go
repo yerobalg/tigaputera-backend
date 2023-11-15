@@ -26,7 +26,7 @@ func Init(log *log.Logger) *rest {
 
 	// Initialize server with graceful shutdown
 	once.Do(func() {
-		gin.SetMode(gin.ReleaseMode) 
+		gin.SetMode(gin.ReleaseMode)
 
 		r.http = gin.New()
 		r.log = log
@@ -39,13 +39,15 @@ func Init(log *log.Logger) *rest {
 
 func (r *rest) RegisterMiddlewareAndRoutes() {
 	// Global middleware
-	// r.http.Use(r.CorsMiddleware())
+	r.http.Use(r.CorsMiddleware())
 	r.http.Use(gin.Recovery())
-	// r.http.Use(r.SetTimeout)
-	// r.http.Use(r.AddFieldsToContext)
+	r.http.Use(r.SetTimeout)
+	r.http.Use(r.AddFieldsToContext)
+
+	// Global routes
+	r.http.GET("/ping", r.Ping)
 
 	// Auth routes
-
 	// r.http.POST("api/v1/auth/register", r.Register)
 	// r.http.POST("api/v1/auth/login", r.Login)
 	// r.http.POST("api/v1/auth/login/google", r.LoginWithGoogle)
@@ -117,4 +119,8 @@ func (r *rest) Run() {
 	}
 
 	r.log.Info(context.Background(), "Server gracefully stopped")
+}
+
+func (r *rest) Ping(ctx *gin.Context) {
+	r.SuccessResponse(ctx, "PONG!!", nil, nil)
 }

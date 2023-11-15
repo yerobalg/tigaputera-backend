@@ -6,10 +6,15 @@ import (
 
 type HTTPResponse struct {
 	Meta       Meta             `json:"metaData"`
-	Message    string           `json:"message"`
+	Message    ResponseMessage  `json:"message"`
 	IsSuccess  bool             `json:"isSuccess"`
 	Data       interface{}      `json:"data"`
 	Pagination *PaginationParam `json:"pagination"`
+}
+
+type ResponseMessage struct {
+	Title       string `json:"title"`
+	Description string `json:"description"`
 }
 
 type Meta struct {

@@ -4,11 +4,11 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/gin-gonic/gin"
+	"github.com/gin-gonic/gin/binding"
 	"tigaputera-backend/sdk/appcontext"
 	"tigaputera-backend/sdk/error"
 	"tigaputera-backend/src/model"
-	"github.com/gin-gonic/gin"
-	"github.com/gin-gonic/gin/binding"
 )
 
 func (r *rest) BindParam(ctx *gin.Context, param interface{}) error {
@@ -21,6 +21,43 @@ func (r *rest) BindParam(ctx *gin.Context, param interface{}) error {
 
 func (r *rest) BindBody(ctx *gin.Context, body interface{}) error {
 	return ctx.ShouldBindWith(body, binding.Default(ctx.Request.Method, ctx.ContentType()))
+}
+
+func (r *rest) SuccessResponse(ctx *gin.Context, message string, data interface{}, pg *model.PaginationParam) {
+	ctx.JSON(200, model.HTTPResponse{
+		Meta:       getRequestMetadata(ctx),
+		Message:    model.ResponseMessage{Title: "Success", Description: message},
+		IsSuccess:  true,
+		Data:       data,
+		Pagination: pg,
+	})
+	r.log.Info(ctx.Request.Context(), message, data)
+}
+
+func (r *rest) CreatedResponse(ctx *gin.Context, message string, data interface{}) {
+	ctx.JSON(201, model.HTTPResponse{
+		Meta: getRequestMetadata(ctx),
+		Message: model.ResponseMessage{
+			Title:       "Created",
+			Description: message,
+		},
+		IsSuccess: true,
+		Data:      data,
+	})
+	r.log.Info(ctx.Request.Context(), message, data)
+}
+
+func (r *rest) ErrorResponse(ctx *gin.Context, err error) {
+	ctx.JSON(int(errors.GetCode(err)), model.HTTPResponse{
+		Meta: getRequestMetadata(ctx),
+		Message: model.ResponseMessage{
+			Title:       errors.GetType(err),
+			Description: errors.GetMessage(err),
+		},
+		IsSuccess: false,
+		Data:      nil,
+	})
+	r.log.Error(ctx.Request.Context(), err.Error())
 }
 
 func getRequestMetadata(ctx *gin.Context) model.Meta {
@@ -36,23 +73,4 @@ func getRequestMetadata(ctx *gin.Context) model.Meta {
 	}
 
 	return meta
-}
-
-func SuccessResponse(ctx *gin.Context, message string, data interface{}, pg *model.PaginationParam) {
-	ctx.JSON(200, model.HTTPResponse{
-		Meta:       getRequestMetadata(ctx),
-		Message:    message,
-		IsSuccess:  true,
-		Data:       data,
-		Pagination: pg,
-	})
-}
-
-func ErrorResponse(ctx *gin.Context, err error) {
-	ctx.JSON(int(errors.GetCode(err)), model.HTTPResponse{
-		Meta:      getRequestMetadata(ctx),
-		Message:   errors.GetType(err),
-		IsSuccess: false,
-		Data:      errors.GetMessage(err),
-	})
 }
