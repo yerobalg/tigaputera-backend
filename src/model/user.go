@@ -26,3 +26,7 @@ type User struct {
 	IsFirstLogin bool   `gorm:"default:true" json:"isFirstLogin"`
 	Role         role   `gorm:"type:varchar(255);default:Supervisor;index" json:"role"`
 }
+
+type UserLoginBody struct {
+	
+}

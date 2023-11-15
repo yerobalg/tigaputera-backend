@@ -15,7 +15,7 @@ type DB struct {
 	*gorm.DB
 }
 
-func Init(dbLogger *log.Logger) (*DB, error) {
+func Init(dbLogger log.LogInterface) (*DB, error) {
 	db, err := initPostgres(dbLogger)
 	if err != nil {
 		return nil, err
@@ -24,7 +24,7 @@ func Init(dbLogger *log.Logger) (*DB, error) {
 	return &DB{db}, nil
 }
 
-func initPostgres(dbLogger *log.Logger) (*gorm.DB, error) {
+func initPostgres(dbLogger log.LogInterface) (*gorm.DB, error) {
 	dataSourceName := fmt.Sprintf(
 		"host=%s port=%s user=%s password=%s dbname=%s sslmode=disable TimeZone=Asia/Jakarta",
 		os.Getenv("DB_HOST"),

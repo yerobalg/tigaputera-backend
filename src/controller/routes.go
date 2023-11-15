@@ -19,11 +19,11 @@ var once = sync.Once{}
 
 type rest struct {
 	http *gin.Engine
-	log  *log.Logger
+	log  log.LogInterface
 	db   *database.DB
 }
 
-func Init(log *log.Logger, db *database.DB) *rest {
+func Init(log log.LogInterface, db *database.DB) *rest {
 	r := &rest{}
 
 	// Initialize server with graceful shutdown

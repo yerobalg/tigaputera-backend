@@ -9,7 +9,18 @@ import (
 	"tigaputera-backend/sdk/error"
 )
 
-func GetToken(data interface{}) (string, error) {
+type jwtLib struct{}
+
+type Interface interface {
+	GetToken(interface{}) (string, error)
+	DecodeToken(string) (map[string]interface{}, error)
+}
+
+func Init() Interface {
+	return &jwtLib{}
+}
+
+func (j *jwtLib) GetToken(data interface{}) (string, error) {
 	expTime, err := strconv.ParseInt(os.Getenv("JWT_EXPIRED_TIME_SEC"), 10, 64)
 	if err != nil {
 		return "", err
@@ -22,7 +33,7 @@ func GetToken(data interface{}) (string, error) {
 	return token.SignedString([]byte(os.Getenv("JWT_SECRET_KEY")))
 }
 
-func DecodeToken(token string) (map[string]interface{}, error) {
+func (j *jwtLib) DecodeToken(token string) (map[string]interface{}, error) {
 	decoded, err := jwt.Parse(token, func(t *jwt.Token) (interface{}, error) {
 		return []byte(os.Getenv("JWT_SECRET_KEY")), nil
 	})

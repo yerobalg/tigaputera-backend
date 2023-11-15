@@ -47,7 +47,7 @@ type Interface interface {
 }
 
 // New initialize logger
-func New(serverLogger *Logger) Interface {
+func New(serverLogger LogInterface) Interface {
 	return &GormLogger{
 		Config:       Config{LogLevel: Info},
 		ServerLogger: serverLogger,
@@ -56,7 +56,7 @@ func New(serverLogger *Logger) Interface {
 
 type GormLogger struct {
 	Config
-	ServerLogger *Logger
+	ServerLogger LogInterface
 }
 
 type SQLLogger struct {
