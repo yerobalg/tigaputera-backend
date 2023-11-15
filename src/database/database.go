@@ -8,6 +8,7 @@ import (
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"tigaputera-backend/sdk/log"
+	"tigaputera-backend/src/model"
 )
 
 type DB struct {
@@ -45,10 +46,35 @@ func initPostgres(dbLogger *log.Logger) (*gorm.DB, error) {
 		return nil, err
 	}
 
+	// Pool configuration
 	sqlDB.SetMaxIdleConns(10)
 	sqlDB.SetMaxOpenConns(100)
 	sqlDB.SetConnMaxIdleTime(5 * time.Minute)
 	sqlDB.SetConnMaxLifetime(10 * time.Minute)
 
 	return db, nil
+}
+
+func (db *DB) Migrate() error {
+	return db.DB.AutoMigrate(
+		&model.User{},
+	)
+}
+
+func (db *DB) SeedSuperAdmin() error {
+	admin := db.DB.Where("role = ?", model.Admin).First(&model.User{})
+	if admin.RowsAffected == 0 {
+		return db.createSuperAdmin()
+	} else {
+		return nil
+	}
+}
+
+func (db *DB) createSuperAdmin() error {
+	return db.DB.Create(&model.User{
+		Username: os.Getenv("SUPER_ADMIN_USERNAME"),
+		Name:     os.Getenv("SUPER_ADMIN_NAME"),
+		Password: os.Getenv("SUPER_ADMIN_PASSWORD"),
+		Role:     model.Admin,
+	}).Error
 }

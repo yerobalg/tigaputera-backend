@@ -28,6 +28,14 @@ func initialize() {
 		panic(err)
 	}
 
+	if err := db.Migrate(); err != nil {
+		panic(err)
+	}
+
+	if err := db.SeedSuperAdmin(); err != nil {
+		panic(err)
+	}
+
 	r := controller.Init(logger, db)
 	r.Run()
 }
