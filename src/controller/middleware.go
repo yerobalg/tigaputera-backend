@@ -9,7 +9,6 @@ import (
 	"tigaputera-backend/sdk/appcontext"
 	"tigaputera-backend/sdk/auth"
 	"tigaputera-backend/sdk/error"
-	"tigaputera-backend/sdk/jwt"
 )
 
 // timeout middleware wraps the request context with a timeout
@@ -67,7 +66,7 @@ func (r *rest) checkToken(ctx *gin.Context) {
 	}
 
 	header = header[len("Bearer "):]
-	tokenClaims, err := jwt.DecodeToken(header)
+	tokenClaims, err := r.jwt.DecodeToken(header)
 	if err != nil {
 		r.ErrorResponse(ctx, err)
 		ctx.Abort()

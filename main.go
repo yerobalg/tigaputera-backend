@@ -1,11 +1,13 @@
 package main
 
 import (
-	"tigaputera-backend/src/database"
-	"tigaputera-backend/src/controller"
-	"tigaputera-backend/sdk/log"
-
 	"github.com/joho/godotenv"
+	"tigaputera-backend/sdk/jwt"
+	"tigaputera-backend/sdk/log"
+	"tigaputera-backend/sdk/password"
+	"tigaputera-backend/sdk/validator"
+	"tigaputera-backend/src/controller"
+	"tigaputera-backend/src/database"
 )
 
 func main() {
@@ -23,6 +25,12 @@ func loadEnv() {
 func initialize() {
 	logger := log.Init()
 
+	validator := validator.Init()
+
+	password := password.Init()
+
+	jwt := jwt.Init()
+
 	db, err := database.Init(logger)
 	if err != nil {
 		panic(err)
@@ -36,6 +44,6 @@ func initialize() {
 		panic(err)
 	}
 
-	r := controller.Init(logger, db)
+	r := controller.Init(logger, db, jwt, password, validator)
 	r.Run()
 }

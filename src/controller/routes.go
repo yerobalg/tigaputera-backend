@@ -11,7 +11,10 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"tigaputera-backend/sdk/jwt"
 	"tigaputera-backend/sdk/log"
+	"tigaputera-backend/sdk/password"
+	"tigaputera-backend/sdk/validator"
 	"tigaputera-backend/src/database"
 )
 
@@ -19,11 +22,20 @@ var once = sync.Once{}
 
 type rest struct {
 	http *gin.Engine
-	log  log.LogInterface
 	db   *database.DB
+	log  log.LogInterface
+	jwt  jwt.Interface
+	password password.Interface
+	validator validator.Interface
 }
 
-func Init(log log.LogInterface, db *database.DB) *rest {
+func Init(
+	log log.LogInterface,
+	db *database.DB,
+	jwt jwt.Interface,
+	password password.Interface,
+	validator validator.Interface,
+) *rest {
 	r := &rest{}
 
 	// Initialize server with graceful shutdown
@@ -33,6 +45,9 @@ func Init(log log.LogInterface, db *database.DB) *rest {
 		r.http = gin.New()
 		r.log = log
 		r.db = db
+		r.jwt = jwt
+		r.password = password
+		r.validator = validator
 
 		r.RegisterMiddlewareAndRoutes()
 	})
