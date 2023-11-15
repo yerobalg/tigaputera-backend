@@ -1,4 +1,4 @@
-package routes
+package controller
 
 import (
 	"context"
@@ -12,6 +12,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"tigaputera-backend/sdk/log"
+	"tigaputera-backend/src/database"
 )
 
 var once = sync.Once{}
@@ -19,9 +20,10 @@ var once = sync.Once{}
 type rest struct {
 	http *gin.Engine
 	log  *log.Logger
+	db   *database.DB
 }
 
-func Init(log *log.Logger) *rest {
+func Init(log *log.Logger, db *database.DB) *rest {
 	r := &rest{}
 
 	// Initialize server with graceful shutdown
@@ -30,6 +32,7 @@ func Init(log *log.Logger) *rest {
 
 		r.http = gin.New()
 		r.log = log
+		r.db = db
 
 		r.RegisterMiddlewareAndRoutes()
 	})

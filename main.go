@@ -2,7 +2,7 @@ package main
 
 import (
 	"tigaputera-backend/src/database"
-	"tigaputera-backend/src/routes"
+	"tigaputera-backend/src/controller"
 	"tigaputera-backend/sdk/log"
 
 	"github.com/joho/godotenv"
@@ -23,11 +23,11 @@ func loadEnv() {
 func initialize() {
 	logger := log.Init()
 
-	_, err := database.Init(logger)
+	db, err := database.Init(logger)
 	if err != nil {
 		panic(err)
 	}
 
-	r := routes.Init(logger)
+	r := controller.Init(logger, db)
 	r.Run()
 }
