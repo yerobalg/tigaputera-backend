@@ -1,8 +1,8 @@
 package main
 
 import (
-	"tigaputera-backend/database"
-	"tigaputera-backend/routes"
+	"tigaputera-backend/src/database"
+	"tigaputera-backend/src/routes"
 	"tigaputera-backend/sdk/log"
 
 	"github.com/joho/godotenv"
