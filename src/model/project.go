@@ -31,14 +31,63 @@ type Project struct {
 	DeletedBy *int64         `json:"deletedBy"`
 
 	Name        string `gorm:"not null;unique;type:varchar(255)" json:"name"`
-	Description string `gorm:"not null;type:vachar(255)" json:"description"`
+	Description string `gorm:"not null;type:varchar(255)" json:"description"`
 	Type        string `gorm:"not null;type:varchar(255)" json:"type"`
 	DeptName    string `gorm:"not null;type:varchar(255)" json:"deptName"`
 	CompanyName string `gorm:"not null;type:varchar(255)" json:"companyName"`
 	Status      string `gorm:"not null;type:varchar(255)" json:"status"`
-	Volume      int64  `json:"volume"`
-	Length      int64  `json:"length"`
-	Width       int64  `json:"width"`
+	Volume      *int64 `json:"volume"`
+	Length      *int64 `json:"length"`
+	Width       *int64 `json:"width"`
 	InspectorID int64  `json:"inspectorId"`
 	Inspector   User   `gorm:"foreignKey:InspectorID" json:"inspector"`
+}
+
+type ProjectParam struct {
+	PaginationParam
+}
+
+type CreateProjectBody struct {
+	Name        string `json:"name" validate:"required"`
+	Description string `json:"description" validate:"required"`
+	Type        string `json:"type" validate:"required"`
+	DeptName    string `json:"deptName" validate:"required"`
+	CompanyName string `json:"companyName" validate:"required"`
+	Volume      *int64 `json:"volume"`
+	Length      *int64 `json:"length"`
+	Width       *int64 `json:"width"`
+}
+
+func ValidateProjectType(typeName string) bool {
+	typeNames := []string{
+		string(Drainage),
+		string(Concrete),
+		string(Ashpalt),
+		string(Building),
+	}
+
+	for _, t := range typeNames {
+		if t == typeName {
+			return true
+		}
+	}
+
+	return false
+}
+
+func ValidateProjectStatus(statusName string) bool {
+	statusNames := []string{
+		string(Running),
+		string(Finished),
+		string(Postponed),
+		string(Canceled),
+	}
+
+	for _, s := range statusNames {
+		if s == statusName {
+			return true
+		}
+	}
+
+	return false
 }

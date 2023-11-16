@@ -93,6 +93,12 @@ func (r *rest) RegisterMiddlewareAndRoutes() {
 		)
 	}
 
+	// Project routes
+	v1.Group("project")
+	{
+		v1.POST("project", r.AuthorizeRole(model.Admin), r.CreateProject)
+	}
+
 	// Medicine routes
 
 	// v1.Group("medicine")

@@ -59,6 +59,7 @@ func initPostgres(dbLogger log.LogInterface) (*gorm.DB, error) {
 func (db *DB) Migrate() error {
 	return db.DB.AutoMigrate(
 		&model.User{},
+		&model.Project{},
 	)
 }
 

@@ -24,13 +24,14 @@ type Meta struct {
 }
 
 type PaginationParam struct {
-	Limit          int64 `form:"limit" json:"limit" gorm:"-"`
-	Page           int64 `form:"page" json:"-" gorm:"-"`
-	Offset         int64 `json:"-" gorm:"-"`
-	CurrentPage    int64 `json:"currentPage" gorm:"-"`
-	TotalPage      int64 `json:"totalPage" gorm:"-"`
-	CurrentElement int64 `json:"currentElement" gorm:"-"`
-	TotalElement   int64 `json:"totalElement" gorm:"-"`
+	Limit          int64  `form:"limit" json:"limit" gorm:"-"`
+	Page           int64  `form:"page" json:"-" gorm:"-"`
+	Keyword        string `form:"keyword" json:"-" gorm:"-"`
+	Offset         int64  `json:"-" gorm:"-"`
+	CurrentPage    int64  `json:"currentPage" gorm:"-"`
+	TotalPage      int64  `json:"totalPage" gorm:"-"`
+	CurrentElement int64  `json:"currentElement" gorm:"-"`
+	TotalElement   int64  `json:"totalElement" gorm:"-"`
 }
 
 func (pg *PaginationParam) SetDefaultPagination() {

@@ -1,11 +1,10 @@
 package controller
 
 import (
+	"github.com/gin-gonic/gin"
 	"tigaputera-backend/sdk/auth"
 	errors "tigaputera-backend/sdk/error"
 	"tigaputera-backend/src/model"
-
-	"github.com/gin-gonic/gin"
 )
 
 // @Summary Login
@@ -151,7 +150,7 @@ func (r *rest) ResetPassword(c *gin.Context) {
 // @Produce json
 // @Security BearerAuth
 // @Param createInspectorBody body model.CreateInspectorBody true "body"
-// @Success 200 {object} model.HTTPResponse{}
+// @Success 201 {object} model.HTTPResponse{}
 // @Failure 400 {object} model.HTTPResponse{}
 // @Failure 401 {object} model.HTTPResponse{}
 // @Failure 500 {object} model.HTTPResponse{}
@@ -205,7 +204,7 @@ func (r *rest) CreateInspector(c *gin.Context) {
 // @Security BearerAuth
 // @param limit query int false "limit"
 // @param page query int false "page"
-// @Success 200 {object} model.HTTPResponse{data=[]model.User,pagination=model.PaginationParam}
+// @Success 200 {object} model.HTTPResponse{data=[]model.User}
 // @Failure 401 {object} model.HTTPResponse{}
 // @Failure 500 {object} model.HTTPResponse{}
 // @Router /v1/user/inspector [GET]
