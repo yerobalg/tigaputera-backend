@@ -16,37 +16,38 @@ import (
 // @Failure 400 {object} model.HTTPResponse{}
 // @Failure 500 {object} model.HTTPResponse{}
 // @Router /v1/auth/login [POST]
-func (r *rest) Login(ctx *gin.Context) {
+func (r *rest) Login(c *gin.Context) {
+	ctx := c.Request.Context()
 	var loginBody model.UserLoginBody
 
-	if err := r.BindBody(ctx, &loginBody); err != nil {
-		r.ErrorResponse(ctx, err)
+	if err := r.BindBody(c, &loginBody); err != nil {
+		r.ErrorResponse(c, err)
 		return
 	}
 
 	if err := r.validator.ValidateStruct(loginBody); err != nil {
-		r.ErrorResponse(ctx, err)
+		r.ErrorResponse(c, err)
 		return
 	}
 
 	userParam := model.UserParam{Username: loginBody.Username}
 	var user model.User
 
-	if err := r.db.WithContext(ctx.Request.Context()).
+	if err := r.db.WithContext(ctx).
 		Where(&userParam).
 		First(&user).Error; err != nil {
-		r.ErrorResponse(ctx, errors.BadRequest("User not found"))
+		r.ErrorResponse(c, errors.BadRequest("User not found"))
 		return
 	}
 
 	if !r.password.Compare(user.Password, loginBody.Password) {
-		r.ErrorResponse(ctx, errors.BadRequest("Wrong password"))
+		r.ErrorResponse(c, errors.BadRequest("Wrong password"))
 		return
 	}
 
 	token, err := r.jwt.GenerateToken(user)
 	if err != nil {
-		r.ErrorResponse(ctx, errors.InternalServerError("Failed to generate token"))
+		r.ErrorResponse(c, errors.InternalServerError("Failed to generate token"))
 		return
 	}
 
@@ -55,7 +56,7 @@ func (r *rest) Login(ctx *gin.Context) {
 		Token: token,
 	}
 
-	r.SuccessResponse(ctx, "Login successfull", userResponse, nil)
+	r.SuccessResponse(c, "Login successfull", userResponse, nil)
 }
 
 // @Summary Get user profile
@@ -66,8 +67,9 @@ func (r *rest) Login(ctx *gin.Context) {
 // @Success 200 {object} model.HTTPResponse{data=model.User}
 // @Failure 401 {object} model.HTTPResponse{}
 // @Router /v1/user/profile [GET]
-func (r *rest) GetUserProfile(ctx *gin.Context) {
-	user := auth.GetUser(ctx.Request.Context())
+func (r *rest) GetUserProfile(c *gin.Context) {
+	ctx := c.Request.Context()
+	user := auth.GetUser(ctx)
 
 	userResponse := model.User{
 		ID:       user.ID,
@@ -76,7 +78,7 @@ func (r *rest) GetUserProfile(ctx *gin.Context) {
 		Role:     model.Role(user.Role),
 	}
 
-	r.SuccessResponse(ctx, "Get user profile success", userResponse, nil)
+	r.SuccessResponse(c, "Get user profile success", userResponse, nil)
 }
 
 // @Summary Reset password
@@ -90,38 +92,39 @@ func (r *rest) GetUserProfile(ctx *gin.Context) {
 // @Failure 401 {object} model.HTTPResponse{}
 // @Failure 500 {object} model.HTTPResponse{}
 // @Router /v1/user/reset-password [PATCH]
-func (r *rest) ResetPassword(ctx *gin.Context) {
-	userInfo := auth.GetUser(ctx.Request.Context())
+func (r *rest) ResetPassword(c *gin.Context) {
+	ctx := c.Request.Context()
+	userInfo := auth.GetUser(ctx)
 	userParam := model.UserParam{Username: userInfo.Username}
 	var user model.User
 
-	if err := r.db.WithContext(ctx.Request.Context()).
+	if err := r.db.WithContext(ctx).
 		Where(&userParam).
 		First(&user).Error; err != nil {
-		r.ErrorResponse(ctx, errors.BadRequest("User not found"))
+		r.ErrorResponse(c, errors.BadRequest("User not found"))
 		return
 	}
 
 	if !user.IsFirstLogin {
-		r.ErrorResponse(ctx, errors.BadRequest("You have already reset your password"))
+		r.ErrorResponse(c, errors.BadRequest("You have already reset your password"))
 		return
 	}
 
 	var resetPasswordBody model.ResetPasswordBody
 
-	if err := r.BindBody(ctx, &resetPasswordBody); err != nil {
-		r.ErrorResponse(ctx, err)
+	if err := r.BindBody(c, &resetPasswordBody); err != nil {
+		r.ErrorResponse(c, err)
 		return
 	}
 
 	if err := r.validator.ValidateStruct(resetPasswordBody); err != nil {
-		r.ErrorResponse(ctx, err)
+		r.ErrorResponse(c, err)
 		return
 	}
 
 	newPassword, err := r.password.Hash(resetPasswordBody.NewPassword)
 	if err != nil {
-		r.ErrorResponse(ctx, errors.InternalServerError("Failed to hash password"))
+		r.ErrorResponse(c, errors.InternalServerError("Failed to hash password"))
 		return
 	}
 
@@ -130,13 +133,13 @@ func (r *rest) ResetPassword(ctx *gin.Context) {
 		IsFirstLogin: false,
 	}
 
-	if err := r.db.WithContext(ctx.Request.Context()).
+	if err := r.db.WithContext(ctx).
 		Model(model.User{}).
 		Where(&userParam).
 		Updates(&updatedUser).Error; err != nil {
-		r.ErrorResponse(ctx, errors.InternalServerError("Failed to reset password"))
+		r.ErrorResponse(c, errors.InternalServerError("Failed to reset password"))
 		return
 	}
 
-	r.SuccessResponse(ctx, "Reset password success", nil, nil)
+	r.SuccessResponse(c, "Reset password success", nil, nil)
 }

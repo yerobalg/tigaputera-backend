@@ -146,6 +146,6 @@ func (r *rest) Run() {
 // @Produce json
 // @Success 200 string example="PONG!!"
 // @Router /ping [GET]
-func (r *rest) Ping(ctx *gin.Context) {
-	r.SuccessResponse(ctx, "PONG!!", nil, nil)
+func (r *rest) Ping(c *gin.Context) {
+	r.SuccessResponse(c, "PONG!!", nil, nil)
 }
