@@ -79,6 +79,7 @@ func (r *rest) RegisterMiddlewareAndRoutes() {
 	v1.Group("user")
 	{
 		v1.GET("user/profile", r.GetUserProfile)
+		v1.PATCH("user/reset-password", r.ResetPassword)
 	}
 
 	// Medicine routes

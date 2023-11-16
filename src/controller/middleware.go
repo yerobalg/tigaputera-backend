@@ -4,11 +4,13 @@ import (
 	"context"
 	"time"
 
-	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
 	"tigaputera-backend/sdk/appcontext"
 	"tigaputera-backend/sdk/auth"
 	"tigaputera-backend/sdk/error"
+	"tigaputera-backend/src/model"
+
+	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 )
 
 // timeout middleware wraps the request context with a timeout
@@ -42,7 +44,7 @@ func (r *rest) CorsMiddleware() gin.HandlerFunc {
 		c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
 		c.Writer.Header().Set("Access-Control-Allow-Credentials", "true")
 		c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, accept, origin, Cache-Control, X-Requested-With")
-		c.Writer.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS, GET, PUT, DELETE")
+		c.Writer.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS, GET, PUT, PATCH, DELETE")
 
 		if c.Request.Method == "OPTIONS" {
 			c.AbortWithStatus(204)
@@ -78,4 +80,17 @@ func (r *rest) checkToken(ctx *gin.Context) {
 	ctx.Request = ctx.Request.WithContext(c)
 
 	ctx.Next()
+}
+
+func (r *rest) AuthorizeRole(roleName model.Role) gin.HandlerFunc {
+	return func(ctx *gin.Context) {
+		userRole := auth.GetUser(ctx.Request.Context()).Role
+		if userRole != string(roleName) {
+			r.ErrorResponse(ctx, errors.Unauthorized("You don't have access to this resource"))
+			ctx.Abort()
+			return
+		}
+
+		ctx.Next()
+	}
 }

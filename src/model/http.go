@@ -24,31 +24,29 @@ type Meta struct {
 }
 
 type PaginationParam struct {
-	Limit          int64 `form:"limit" json:"limit" gorm:"-"`
-	Page           int64 `form:"page" json:"-" gorm:"-"`
-	Offset         int64 `json:"-" gorm:"-"`
-	CurrentPage    int64 `json:"currentPage" gorm:"-"`
-	TotalPage      int64 `json:"totalPage" gorm:"-"`
-	CurrentElement int64 `json:"currentElement" gorm:"-"`
-	TotalElement   int64 `json:"totalElement" gorm:"-"`
+	Limit          int64 `form:"limit" json:"limit"`
+	Page           int64 `form:"page" json:"-"`
+	Offset         int64 `json:"-"`
+	CurrentPage    int64 `json:"currentPage"`
+	TotalPage      int64 `json:"totalPage"`
+	CurrentElement int64 `json:"currentElement"`
+	TotalElement   int64 `json:"totalElement"`
+}
+
+func (pg *PaginationParam) SetDefaultPagination() {
+	if pg.Limit == 0 {
+		pg.Limit = 10
+	}
+
+	if pg.Page == 0 {
+		pg.Page = 1
+	}
+
+	pg.Offset = (pg.Page - 1) * pg.Limit
 }
 
 func (pg *PaginationParam) ProcessPagination(rowsAffected int64) {
 	pg.CurrentPage = pg.Page
 	pg.TotalPage = int64(math.Ceil(float64(pg.TotalElement) / float64(pg.Limit)))
 	pg.CurrentElement = rowsAffected
-}
-
-func FormatPaginationParam(params PaginationParam) PaginationParam {
-	paginationParam := params
-
-	if params.Limit == 0 {
-		paginationParam.Limit = 10
-	}
-
-	if params.Page == 0 {
-		paginationParam.Page = 1
-	}
-
-	return paginationParam
 }

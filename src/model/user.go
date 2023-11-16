@@ -27,6 +27,11 @@ type User struct {
 	Role         Role   `gorm:"type:varchar(255);default:Supervisor;index" json:"role"`
 }
 
+type UserParam struct {
+	Username string `param:"username"`
+	PaginationParam
+}
+
 type UserLoginBody struct {
 	Username string `json:"username" validate:"required"`
 	Password string `json:"password" validate:"required"`
@@ -35,4 +40,8 @@ type UserLoginBody struct {
 type UserLoginResponse struct {
 	User  User   `json:"user"`
 	Token string `json:"token"`
+}
+
+type ResetPasswordBody struct {
+	NewPassword string `json:"newPassword" validate:"required,min=8"`
 }
