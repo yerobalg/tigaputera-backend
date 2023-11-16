@@ -11,6 +11,9 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
+	_ "tigaputera-backend/docs"
 	"tigaputera-backend/sdk/jwt"
 	"tigaputera-backend/sdk/log"
 	"tigaputera-backend/sdk/password"
@@ -21,11 +24,11 @@ import (
 var once = sync.Once{}
 
 type rest struct {
-	http *gin.Engine
-	db   *database.DB
-	log  log.LogInterface
-	jwt  jwt.Interface
-	password password.Interface
+	http      *gin.Engine
+	db        *database.DB
+	log       log.LogInterface
+	jwt       jwt.Interface
+	password  password.Interface
 	validator validator.Interface
 }
 
@@ -64,11 +67,10 @@ func (r *rest) RegisterMiddlewareAndRoutes() {
 
 	// Global routes
 	r.http.GET("/ping", r.Ping)
+	r.http.GET("/docs/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
 	// Auth routes
-	// r.http.POST("api/v1/auth/register", r.Register)
-	// r.http.POST("api/v1/auth/login", r.Login)
-	// r.http.POST("api/v1/auth/login/google", r.LoginWithGoogle)
+	r.http.POST("/v1/auth/login", r.Login)
 
 	// Protected Routes
 
@@ -139,6 +141,12 @@ func (r *rest) Run() {
 	r.log.Info(context.Background(), "Server gracefully stopped")
 }
 
+// @Summary Health Check
+// @Description Check if the server is running
+// @Tags Server
+// @Produce json
+// @Success 200 string example="PONG!!"
+// @Router /ping [GET]
 func (r *rest) Ping(ctx *gin.Context) {
 	r.SuccessResponse(ctx, "PONG!!", nil, nil)
 }

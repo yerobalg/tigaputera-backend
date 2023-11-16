@@ -10,6 +10,13 @@ import (
 	"tigaputera-backend/src/database"
 )
 
+// @title Tigaputera Backend API
+// @description API about financial management for construction company
+// @version 1.0
+
+// @contact.name 	Yerobal Gustaf Sekeon
+// @contact.email 	yerobalg@gmail.com
+
 func main() {
 	loadEnv()
 	initialize()

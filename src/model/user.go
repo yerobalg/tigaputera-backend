@@ -15,7 +15,7 @@ type User struct {
 	ID        int64          `gorm:"primaryKey" json:"id"`
 	CreatedAt int64          `json:"createdAt"`
 	UpdatedAt int64          `json:"updatedAt"`
-	DeletedAt gorm.DeletedAt `gorm:"index" json:"deletedAt"`
+	DeletedAt gorm.DeletedAt `gorm:"index" json:"deletedAt" swaggertype:"string" example:"2020-12-31T00:00:00Z"`
 	CreatedBy *int64         `json:"createdBy"`
 	UpdatedBy *int64         `json:"updatedBy"`
 	DeletedBy *int64         `json:"deletedBy"`
@@ -28,5 +28,11 @@ type User struct {
 }
 
 type UserLoginBody struct {
-	
+	Username string `json:"username" validate:"required"`
+	Password string `json:"password" validate:"required"`
+}
+
+type UserLoginResponse struct {
+	User  User   `json:"user"`
+	Token string `json:"token"`
 }

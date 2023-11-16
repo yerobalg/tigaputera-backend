@@ -12,7 +12,7 @@ import (
 type jwtLib struct{}
 
 type Interface interface {
-	GetToken(interface{}) (string, error)
+	GenerateToken(interface{}) (string, error)
 	DecodeToken(string) (map[string]interface{}, error)
 }
 
@@ -20,7 +20,7 @@ func Init() Interface {
 	return &jwtLib{}
 }
 
-func (j *jwtLib) GetToken(data interface{}) (string, error) {
+func (j *jwtLib) GenerateToken(data interface{}) (string, error) {
 	expTime, err := strconv.ParseInt(os.Getenv("JWT_EXPIRED_TIME_SEC"), 10, 64)
 	if err != nil {
 		return "", err

@@ -8,6 +8,7 @@ import (
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"tigaputera-backend/sdk/log"
+	"tigaputera-backend/sdk/password"
 	"tigaputera-backend/src/model"
 )
 
@@ -71,10 +72,15 @@ func (db *DB) SeedSuperAdmin() error {
 }
 
 func (db *DB) createSuperAdmin() error {
+	password := password.Init()
+	adminPassword, err := password.Hash(os.Getenv("SUPER_ADMIN_PASSWORD"))
+	if err != nil {
+		return err
+	}
 	return db.DB.Create(&model.User{
 		Username: os.Getenv("SUPER_ADMIN_USERNAME"),
 		Name:     os.Getenv("SUPER_ADMIN_NAME"),
-		Password: os.Getenv("SUPER_ADMIN_PASSWORD"),
+		Password: adminPassword,
 		Role:     model.Admin,
 	}).Error
 }
