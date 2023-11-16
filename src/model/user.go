@@ -29,6 +29,7 @@ type User struct {
 
 type UserParam struct {
 	Username string `param:"username"`
+	Role     string `param:"role"`
 	PaginationParam
 }
 
@@ -44,4 +45,10 @@ type UserLoginResponse struct {
 
 type ResetPasswordBody struct {
 	NewPassword string `json:"newPassword" validate:"required,min=8"`
+}
+
+type CreateSupervisorBody struct {
+	Username string `json:"username" validate:"required,min=8"`
+	Name     string `json:"name" validate:"required"`
+	Password string `json:"password" validate:"required,min=8"`
 }

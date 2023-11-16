@@ -3,6 +3,7 @@ package controller
 import (
 	"fmt"
 	"time"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/gin-gonic/gin/binding"
@@ -31,7 +32,7 @@ func (r *rest) SuccessResponse(ctx *gin.Context, message string, data interface{
 		Data:       data,
 		Pagination: pg,
 	})
-	r.log.Info(ctx.Request.Context(), message, data)
+	r.log.Info(ctx.Request.Context(), message, nil)
 }
 
 func (r *rest) CreatedResponse(ctx *gin.Context, message string, data interface{}) {
@@ -73,4 +74,8 @@ func getRequestMetadata(ctx *gin.Context) model.Meta {
 	}
 
 	return meta
+}
+
+func (r *rest) isUniqueKeyViolation(err error) bool {
+	return strings.Contains(err.Error(), "duplicate key value violates unique constraint")
 }

@@ -36,18 +36,18 @@ func (r *rest) Login(c *gin.Context) {
 	if err := r.db.WithContext(ctx).
 		Where(&userParam).
 		First(&user).Error; err != nil {
-		r.ErrorResponse(c, errors.BadRequest("User not found"))
+		r.ErrorResponse(c, errors.BadRequest("Pengguna tidak ditemukan"))
 		return
 	}
 
 	if !r.password.Compare(user.Password, loginBody.Password) {
-		r.ErrorResponse(c, errors.BadRequest("Wrong password"))
+		r.ErrorResponse(c, errors.BadRequest("Password anda salah"))
 		return
 	}
 
 	token, err := r.jwt.GenerateToken(user)
 	if err != nil {
-		r.ErrorResponse(c, errors.InternalServerError("Failed to generate token"))
+		r.ErrorResponse(c, errors.InternalServerError(err.Error()))
 		return
 	}
 
@@ -56,7 +56,7 @@ func (r *rest) Login(c *gin.Context) {
 		Token: token,
 	}
 
-	r.SuccessResponse(c, "Login successfull", userResponse, nil)
+	r.SuccessResponse(c, "Login berhasil", userResponse, nil)
 }
 
 // @Summary Get user profile
@@ -78,7 +78,7 @@ func (r *rest) GetUserProfile(c *gin.Context) {
 		Role:     model.Role(user.Role),
 	}
 
-	r.SuccessResponse(c, "Get user profile success", userResponse, nil)
+	r.SuccessResponse(c, "Berhasil menampilkan profil", userResponse, nil)
 }
 
 // @Summary Reset password
@@ -101,12 +101,12 @@ func (r *rest) ResetPassword(c *gin.Context) {
 	if err := r.db.WithContext(ctx).
 		Where(&userParam).
 		First(&user).Error; err != nil {
-		r.ErrorResponse(c, errors.BadRequest("User not found"))
+		r.ErrorResponse(c, errors.BadRequest("Pengguna tidak ditemukan"))
 		return
 	}
 
 	if !user.IsFirstLogin {
-		r.ErrorResponse(c, errors.BadRequest("You have already reset your password"))
+		r.ErrorResponse(c, errors.BadRequest("Anda sudah pernah melakukan mengganti password"))
 		return
 	}
 
@@ -124,7 +124,7 @@ func (r *rest) ResetPassword(c *gin.Context) {
 
 	newPassword, err := r.password.Hash(resetPasswordBody.NewPassword)
 	if err != nil {
-		r.ErrorResponse(c, errors.InternalServerError("Failed to hash password"))
+		r.ErrorResponse(c, errors.InternalServerError(err.Error()))
 		return
 	}
 
@@ -137,9 +137,106 @@ func (r *rest) ResetPassword(c *gin.Context) {
 		Model(model.User{}).
 		Where(&userParam).
 		Updates(&updatedUser).Error; err != nil {
-		r.ErrorResponse(c, errors.InternalServerError("Failed to reset password"))
+		r.ErrorResponse(c, errors.InternalServerError(err.Error()))
 		return
 	}
 
-	r.SuccessResponse(c, "Reset password success", nil, nil)
+	r.SuccessResponse(c, "Reset password berhasil!", nil, nil)
+}
+
+// @Summary Create supervisor
+// @Description Create new supervisor
+// @Tags User
+// @Produce json
+// @Security BearerAuth
+// @Param createSupervisorBody body model.CreateSupervisorBody true "body"
+// @Success 200 {object} model.HTTPResponse{}
+// @Failure 400 {object} model.HTTPResponse{}
+// @Failure 401 {object} model.HTTPResponse{}
+// @Failure 500 {object} model.HTTPResponse{}
+// @Router /v1/user/supervisor [POST]
+func (r *rest) CreateSupervisor(c *gin.Context) {
+	ctx := c.Request.Context()
+	var createSupervisorBody model.CreateSupervisorBody
+
+	if err := r.BindBody(c, &createSupervisorBody); err != nil {
+		r.ErrorResponse(c, err)
+		return
+	}
+
+	if err := r.validator.ValidateStruct(createSupervisorBody); err != nil {
+		r.ErrorResponse(c, err)
+		return
+	}
+
+	hashedPassword, err := r.password.Hash(createSupervisorBody.Password)
+	if err != nil {
+		r.ErrorResponse(c, errors.InternalServerError(err.Error()))
+		return
+	}
+
+	userInfo := auth.GetUser(ctx)
+	newUser := model.User{
+		Username:  createSupervisorBody.Username,
+		Name:      createSupervisorBody.Name,
+		Password:  hashedPassword,
+		Role:      model.Supervisor,
+		CreatedBy: &userInfo.ID,
+		UpdatedBy: &userInfo.ID,
+	}
+
+	insertError := r.db.WithContext(ctx).Create(&newUser).Error
+	if insertError != nil && r.isUniqueKeyViolation(insertError) {
+		r.ErrorResponse(c, errors.BadRequest("Username sudah digunakan"))
+		return
+	} else if insertError != nil {
+		r.ErrorResponse(c, errors.InternalServerError(insertError.Error()))
+		return
+	}
+
+	r.CreatedResponse(c, "Berhasil membuat pengawas", nil)
+}
+
+// @Summary Get list supervisor
+// @Description Get list supervisor
+// @Tags User
+// @Produce json
+// @Security BearerAuth
+// @param limit query int false "limit"
+// @param page query int false "page"
+// @Success 200 {object} model.HTTPResponse{data=[]model.User,pagination=model.PaginationParam}
+// @Failure 401 {object} model.HTTPResponse{}
+// @Failure 500 {object} model.HTTPResponse{}
+// @Router /v1/user/supervisor [GET]
+func (r *rest) GetListSupervisor(c *gin.Context) {
+	ctx := c.Request.Context()
+	var userParam model.UserParam
+	if err := r.BindParam(c, &userParam); err != nil {
+		r.ErrorResponse(c, err)
+		return
+	}
+	
+	userParam.Role = string(model.Supervisor)
+	userParam.PaginationParam.SetDefaultPagination()
+
+	var users []model.User
+
+	if err := r.db.WithContext(ctx).
+		Where(&userParam).
+		Offset(int(userParam.Offset)).
+		Limit(int(userParam.Limit)).
+		Find(&users).Error; err != nil {
+		r.ErrorResponse(c, errors.InternalServerError(err.Error()))
+	}
+
+	if err := r.db.WithContext(ctx).
+		Model(model.User{}).
+		Where(&userParam).
+		Count(&userParam.TotalElement).Error; err != nil {
+		r.ErrorResponse(c, errors.InternalServerError(err.Error()))
+	}
+
+	userParam.PaginationParam.ProcessPagination(int64(len(users)))
+
+	r.SuccessResponse(c, "Berhasil mendapatkan list pengawas", users, &userParam.PaginationParam)
 }

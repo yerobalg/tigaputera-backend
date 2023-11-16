@@ -19,6 +19,7 @@ import (
 	"tigaputera-backend/sdk/password"
 	"tigaputera-backend/sdk/validator"
 	"tigaputera-backend/src/database"
+	"tigaputera-backend/src/model"
 )
 
 var once = sync.Once{}
@@ -80,6 +81,16 @@ func (r *rest) RegisterMiddlewareAndRoutes() {
 	{
 		v1.GET("user/profile", r.GetUserProfile)
 		v1.PATCH("user/reset-password", r.ResetPassword)
+		v1.POST(
+			"user/supervisor",
+			r.AuthorizeRole(model.Admin),
+			r.CreateSupervisor,
+		)
+		v1.GET(
+			"user/supervisor",
+			r.AuthorizeRole(model.Admin),
+			r.GetListSupervisor,
+		)
 	}
 
 	// Medicine routes
