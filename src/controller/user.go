@@ -1,9 +1,10 @@
 package controller
 
 import (
-	"tigaputera-backend/src/model"
-	"tigaputera-backend/sdk/error"
 	"github.com/gin-gonic/gin"
+	"tigaputera-backend/sdk/auth"
+	"tigaputera-backend/sdk/error"
+	"tigaputera-backend/src/model"
 )
 
 // @Summary Login
@@ -15,7 +16,7 @@ import (
 // @Failure 400 {object} model.HTTPResponse{}
 // @Failure 500 {object} model.HTTPResponse{}
 // @Router /v1/auth/login [POST]
-func (r *rest) Login (ctx *gin.Context) {
+func (r *rest) Login(ctx *gin.Context) {
 	var loginBody model.UserLoginBody
 
 	if err := r.BindBody(ctx, &loginBody); err != nil {
@@ -32,8 +33,7 @@ func (r *rest) Login (ctx *gin.Context) {
 
 	if err := r.db.WithContext(ctx.Request.Context()).
 		Where("username = ?", loginBody.Username).
-		First(&user).Error; 
-	err != nil {
+		First(&user).Error; err != nil {
 		r.ErrorResponse(ctx, errors.BadRequest("User not found"))
 		return
 	}
@@ -50,9 +50,30 @@ func (r *rest) Login (ctx *gin.Context) {
 	}
 
 	userResponse := model.UserLoginResponse{
-		User: user,
+		User:  user,
 		Token: token,
 	}
 
 	r.SuccessResponse(ctx, "Login successfull", userResponse, nil)
+}
+
+// @Summary Get user profile
+// @Description Get user profile
+// @Tags User
+// @Produce json
+// @Security BearerAuth
+// @Success 200 {object} model.HTTPResponse{data=model.User}
+// @Failure 401 {object} model.HTTPResponse{}
+// @Router /v1/user/profile [GET]
+func (r *rest) GetUserProfile(ctx *gin.Context) {
+	user := auth.GetUser(ctx.Request.Context())
+
+	userResponse := model.User{
+		ID:       user.ID,
+		Username: user.Username,
+		Name:     user.Name,
+		Role:     model.Role(user.Role),
+	}
+
+	r.SuccessResponse(ctx, "Get user profile success", userResponse, nil)
 }

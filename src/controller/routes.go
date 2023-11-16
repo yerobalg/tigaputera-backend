@@ -73,15 +73,13 @@ func (r *rest) RegisterMiddlewareAndRoutes() {
 	r.http.POST("/v1/auth/login", r.Login)
 
 	// Protected Routes
-
-	// v1 := r.http.Group("api/v1", r.Authorization())
+	v1 := r.http.Group("v1", r.Authorization())
 
 	// User routes
-
-	// v1.Group("user")
-	// {
-	// 	v1.GET("user/profile", r.GetUserProfile)
-	// }
+	v1.Group("user")
+	{
+		v1.GET("user/profile", r.GetUserProfile)
+	}
 
 	// Medicine routes
 

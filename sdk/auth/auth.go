@@ -11,10 +11,11 @@ const (
 )
 
 type User struct {
-	ID              int64  `json:"id"`
-	Email           string `json:"email"`
-	Name            string `json:"name"`
-	IsGoogleAccount bool   `json:"isGoogleAccount"`
+	ID           int64  `json:"id"`
+	Username     string `json:"username"`
+	Name         string `json:"name"`
+	IsFirstLogin bool   `json:"isFirstLogin"`
+	Role         string `json:"role"`
 }
 
 func GetUserID(ctx context.Context) int64 {
@@ -37,10 +38,11 @@ func GetUser(ctx context.Context) User {
 
 func SetUser(ctx context.Context, user map[string]interface{}) context.Context {
 	userObj := User{
-		ID:              int64(user["id"].(float64)),
-		Email:           user["email"].(string),
-		Name:            user["name"].(string),
-		IsGoogleAccount: user["isGoogleAccount"].(bool),
+		ID:           int64(user["id"].(float64)),
+		Username:     user["username"].(string),
+		Name:         user["name"].(string),
+		IsFirstLogin: user["isFirstLogin"].(bool),
+		Role:         user["role"].(string),
 	}
 	return context.WithValue(ctx, userAuthInfo, userObj)
 }

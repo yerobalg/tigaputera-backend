@@ -60,7 +60,7 @@ func (r *rest) Authorization() gin.HandlerFunc {
 func (r *rest) checkToken(ctx *gin.Context) {
 	header := ctx.Request.Header.Get("Authorization")
 	if header == "" {
-		r.ErrorResponse(ctx, errors.NewWithCode(401, "Unauthorized", "Please login first"))
+		r.ErrorResponse(ctx, errors.Unauthorized("Please login first"))
 		ctx.Abort()
 		return
 	}
@@ -68,11 +68,11 @@ func (r *rest) checkToken(ctx *gin.Context) {
 	header = header[len("Bearer "):]
 	tokenClaims, err := r.jwt.DecodeToken(header)
 	if err != nil {
-		r.ErrorResponse(ctx, err)
+		r.ErrorResponse(ctx, errors.Unauthorized("Invalid token"))
 		ctx.Abort()
 		return
 	}
-	//ctx.Set("user", tokenClaims["data"])
+
 	c := ctx.Request.Context()
 	c = auth.SetUser(c, tokenClaims["data"].(map[string]interface{}))
 	ctx.Request = ctx.Request.WithContext(c)

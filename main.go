@@ -17,6 +17,11 @@ import (
 // @contact.name 	Yerobal Gustaf Sekeon
 // @contact.email 	yerobalg@gmail.com
 
+// @securitydefinitions.apikey BearerAuth
+// @in header
+// @name Authorization
+// @value Bearer {token}
+
 func main() {
 	loadEnv()
 	initialize()

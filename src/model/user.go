@@ -4,11 +4,11 @@ import (
 	"gorm.io/gorm"
 )
 
-type role string
+type Role string
 
 const (
-	Admin      role = "Admin"
-	Supervisor role = "Supervisor"
+	Admin      Role = "Admin"
+	Supervisor Role = "Supervisor"
 )
 
 type User struct {
@@ -24,7 +24,7 @@ type User struct {
 	Name         string `gorm:"not null;type:varchar(255)" json:"name"`
 	Password     string `gorm:"not null;type:text" json:"-"`
 	IsFirstLogin bool   `gorm:"default:true" json:"isFirstLogin"`
-	Role         role   `gorm:"type:varchar(255);default:Supervisor;index" json:"role"`
+	Role         Role   `gorm:"type:varchar(255);default:Supervisor;index" json:"role"`
 }
 
 type UserLoginBody struct {
