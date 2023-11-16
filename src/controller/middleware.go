@@ -62,7 +62,7 @@ func (r *rest) Authorization() gin.HandlerFunc {
 func (r *rest) checkToken(ctx *gin.Context) {
 	header := ctx.Request.Header.Get("Authorization")
 	if header == "" {
-		r.ErrorResponse(ctx, errors.Unauthorized("Please login first"))
+		r.ErrorResponse(ctx, errors.Unauthorized("Harap login terlebih dahulu"))
 		ctx.Abort()
 		return
 	}
@@ -70,7 +70,7 @@ func (r *rest) checkToken(ctx *gin.Context) {
 	header = header[len("Bearer "):]
 	tokenClaims, err := r.jwt.DecodeToken(header)
 	if err != nil {
-		r.ErrorResponse(ctx, errors.Unauthorized("Invalid token"))
+		r.ErrorResponse(ctx, errors.Unauthorized("Token tidak valid"))
 		ctx.Abort()
 		return
 	}
@@ -86,7 +86,7 @@ func (r *rest) AuthorizeRole(roleName model.Role) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		userRole := auth.GetUser(ctx.Request.Context()).Role
 		if userRole != string(roleName) {
-			r.ErrorResponse(ctx, errors.Unauthorized("You don't have access to this resource"))
+			r.ErrorResponse(ctx, errors.Unauthorized("Anda tidak memiliki akses untuk melakukan aksi ini"))
 			ctx.Abort()
 			return
 		}

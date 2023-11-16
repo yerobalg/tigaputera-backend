@@ -7,15 +7,15 @@ import (
 type Role string
 
 const (
-	Admin      Role = "Admin"
-	Supervisor Role = "Supervisor"
+	Admin     Role = "Admin"
+	Inspector Role = "Inspector"
 )
 
 type User struct {
 	ID        int64          `gorm:"primaryKey" json:"id"`
 	CreatedAt int64          `json:"createdAt"`
 	UpdatedAt int64          `json:"updatedAt"`
-	DeletedAt gorm.DeletedAt `gorm:"index" json:"deletedAt" swaggertype:"string" example:"2020-12-31T00:00:00Z"`
+	DeletedAt gorm.DeletedAt `gorm:"index" json:"-"`
 	CreatedBy *int64         `json:"createdBy"`
 	UpdatedBy *int64         `json:"updatedBy"`
 	DeletedBy *int64         `json:"deletedBy"`
@@ -24,7 +24,7 @@ type User struct {
 	Name         string `gorm:"not null;type:varchar(255)" json:"name"`
 	Password     string `gorm:"not null;type:text" json:"-"`
 	IsFirstLogin bool   `gorm:"default:true" json:"isFirstLogin"`
-	Role         Role   `gorm:"type:varchar(255);default:Supervisor;index" json:"role"`
+	Role         Role   `gorm:"type:varchar(255);default:Inspector;index" json:"role"`
 }
 
 type UserParam struct {
@@ -47,7 +47,7 @@ type ResetPasswordBody struct {
 	NewPassword string `json:"newPassword" validate:"required,min=8"`
 }
 
-type CreateSupervisorBody struct {
+type CreateInspectorBody struct {
 	Username string `json:"username" validate:"required,min=8"`
 	Name     string `json:"name" validate:"required"`
 	Password string `json:"password" validate:"required,min=8"`

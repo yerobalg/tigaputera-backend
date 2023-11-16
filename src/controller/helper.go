@@ -27,7 +27,7 @@ func (r *rest) BindBody(ctx *gin.Context, body interface{}) error {
 func (r *rest) SuccessResponse(ctx *gin.Context, message string, data interface{}, pg *model.PaginationParam) {
 	ctx.JSON(200, model.HTTPResponse{
 		Meta:       getRequestMetadata(ctx),
-		Message:    model.ResponseMessage{Title: "Success", Description: message},
+		Message:    model.ResponseMessage{Title: "Sukses", Description: message},
 		IsSuccess:  true,
 		Data:       data,
 		Pagination: pg,
@@ -39,7 +39,7 @@ func (r *rest) CreatedResponse(ctx *gin.Context, message string, data interface{
 	ctx.JSON(201, model.HTTPResponse{
 		Meta: getRequestMetadata(ctx),
 		Message: model.ResponseMessage{
-			Title:       "Created",
+			Title:       "Sukses",
 			Description: message,
 		},
 		IsSuccess: true,

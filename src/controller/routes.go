@@ -82,14 +82,14 @@ func (r *rest) RegisterMiddlewareAndRoutes() {
 		v1.GET("user/profile", r.GetUserProfile)
 		v1.PATCH("user/reset-password", r.ResetPassword)
 		v1.POST(
-			"user/supervisor",
+			"user/inspector",
 			r.AuthorizeRole(model.Admin),
-			r.CreateSupervisor,
+			r.CreateInspector,
 		)
 		v1.GET(
-			"user/supervisor",
+			"user/inspector",
 			r.AuthorizeRole(model.Admin),
-			r.GetListSupervisor,
+			r.GetListInspector,
 		)
 	}
 

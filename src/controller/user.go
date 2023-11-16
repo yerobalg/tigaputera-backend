@@ -1,10 +1,11 @@
 package controller
 
 import (
-	"github.com/gin-gonic/gin"
 	"tigaputera-backend/sdk/auth"
-	"tigaputera-backend/sdk/error"
+	errors "tigaputera-backend/sdk/error"
 	"tigaputera-backend/src/model"
+
+	"github.com/gin-gonic/gin"
 )
 
 // @Summary Login
@@ -144,32 +145,32 @@ func (r *rest) ResetPassword(c *gin.Context) {
 	r.SuccessResponse(c, "Reset password berhasil!", nil, nil)
 }
 
-// @Summary Create supervisor
-// @Description Create new supervisor
+// @Summary Create inspector
+// @Description Create new inspector
 // @Tags User
 // @Produce json
 // @Security BearerAuth
-// @Param createSupervisorBody body model.CreateSupervisorBody true "body"
+// @Param createInspectorBody body model.CreateInspectorBody true "body"
 // @Success 200 {object} model.HTTPResponse{}
 // @Failure 400 {object} model.HTTPResponse{}
 // @Failure 401 {object} model.HTTPResponse{}
 // @Failure 500 {object} model.HTTPResponse{}
-// @Router /v1/user/supervisor [POST]
-func (r *rest) CreateSupervisor(c *gin.Context) {
+// @Router /v1/user/inspector [POST]
+func (r *rest) CreateInspector(c *gin.Context) {
 	ctx := c.Request.Context()
-	var createSupervisorBody model.CreateSupervisorBody
+	var createInspectorBody model.CreateInspectorBody
 
-	if err := r.BindBody(c, &createSupervisorBody); err != nil {
+	if err := r.BindBody(c, &createInspectorBody); err != nil {
 		r.ErrorResponse(c, err)
 		return
 	}
 
-	if err := r.validator.ValidateStruct(createSupervisorBody); err != nil {
+	if err := r.validator.ValidateStruct(createInspectorBody); err != nil {
 		r.ErrorResponse(c, err)
 		return
 	}
 
-	hashedPassword, err := r.password.Hash(createSupervisorBody.Password)
+	hashedPassword, err := r.password.Hash(createInspectorBody.Password)
 	if err != nil {
 		r.ErrorResponse(c, errors.InternalServerError(err.Error()))
 		return
@@ -177,10 +178,10 @@ func (r *rest) CreateSupervisor(c *gin.Context) {
 
 	userInfo := auth.GetUser(ctx)
 	newUser := model.User{
-		Username:  createSupervisorBody.Username,
-		Name:      createSupervisorBody.Name,
+		Username:  createInspectorBody.Username,
+		Name:      createInspectorBody.Name,
 		Password:  hashedPassword,
-		Role:      model.Supervisor,
+		Role:      model.Inspector,
 		CreatedBy: &userInfo.ID,
 		UpdatedBy: &userInfo.ID,
 	}
@@ -197,8 +198,8 @@ func (r *rest) CreateSupervisor(c *gin.Context) {
 	r.CreatedResponse(c, "Berhasil membuat pengawas", nil)
 }
 
-// @Summary Get list supervisor
-// @Description Get list supervisor
+// @Summary Get list inspector
+// @Description Get list inspector
 // @Tags User
 // @Produce json
 // @Security BearerAuth
@@ -207,16 +208,16 @@ func (r *rest) CreateSupervisor(c *gin.Context) {
 // @Success 200 {object} model.HTTPResponse{data=[]model.User,pagination=model.PaginationParam}
 // @Failure 401 {object} model.HTTPResponse{}
 // @Failure 500 {object} model.HTTPResponse{}
-// @Router /v1/user/supervisor [GET]
-func (r *rest) GetListSupervisor(c *gin.Context) {
+// @Router /v1/user/inspector [GET]
+func (r *rest) GetListInspector(c *gin.Context) {
 	ctx := c.Request.Context()
 	var userParam model.UserParam
 	if err := r.BindParam(c, &userParam); err != nil {
 		r.ErrorResponse(c, err)
 		return
 	}
-	
-	userParam.Role = string(model.Supervisor)
+
+	userParam.Role = string(model.Inspector)
 	userParam.PaginationParam.SetDefaultPagination()
 
 	var users []model.User
