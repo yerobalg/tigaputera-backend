@@ -53,9 +53,19 @@ type CreateProjectBody struct {
 	Type        string `json:"type" validate:"required"`
 	DeptName    string `json:"deptName" validate:"required"`
 	CompanyName string `json:"companyName" validate:"required"`
+	InspectorID int64  `json:"inspectorId" validate:"required"`
 	Volume      *int64 `json:"volume"`
 	Length      *int64 `json:"length"`
 	Width       *int64 `json:"width"`
+}
+
+type ProjectListResponse struct {
+	ID            int64  `json:"id"`
+	Name          string `json:"name"`
+	Type          string `json:"type"`
+	Status        string `json:"status"`
+	UpdatedAt     int64  `json:"updatedAt"`
+	InspectorName string `json:"inspectorName"`
 }
 
 func ValidateProjectType(typeName string) bool {
