@@ -16,6 +16,7 @@ import (
 // @Param createProjectBody body model.CreateProjectBody true "body"
 // @Success 201 {object} model.HTTPResponse{}
 // @Failure 400 {object} model.HTTPResponse{}
+// @Failure 401 {object} model.HTTPResponse{}
 // @Failure 500 {object} model.HTTPResponse{}
 // @Router /v1/project [POST]
 func (r *rest) CreateProject(c *gin.Context) {
@@ -28,11 +29,11 @@ func (r *rest) CreateProject(c *gin.Context) {
 	}
 
 	if err := r.validator.ValidateStruct(body); err != nil {
-		r.ErrorResponse(c, err)
+		r.ErrorResponse(c, errors.BadRequest(err.Error()))
 		return
 	}
 
-	if !model.ValidateProjectType(body.Type) {
+	if !model.IsProjectTypeCorrect(body.Type) {
 		r.ErrorResponse(c, errors.BadRequest("Tipe proyek harus Drainase, Beton, Hotmix, atau Bangunan"))
 		return
 	}
@@ -50,7 +51,11 @@ func (r *rest) CreateProject(c *gin.Context) {
 		InspectorID: body.InspectorID,
 	}
 
-	if err := r.db.WithContext(ctx).Create(&project).Error; err != nil {
+	err := r.db.WithContext(ctx).Create(&project).Error
+	if err != nil && r.isUniqueKeyViolation(err) {
+		r.ErrorResponse(c, errors.BadRequest("Nama proyek sudah ada"))
+		return
+	} else if err != nil {
 		r.ErrorResponse(c, errors.InternalServerError(err.Error()))
 		return
 	}
@@ -212,7 +217,7 @@ func (r *rest) UpdateProjectBudget(c *gin.Context) {
 	}
 
 	if err := r.validator.ValidateStruct(body); err != nil {
-		r.ErrorResponse(c, err)
+		r.ErrorResponse(c, errors.BadRequest(err.Error()))
 		return
 	}
 
@@ -222,13 +227,79 @@ func (r *rest) UpdateProjectBudget(c *gin.Context) {
 		PPH:    body.PPH,
 	}
 
-	if err := r.db.WithContext(ctx).
+	user := auth.GetUser(ctx)
+	param.InspectorID = user.ID
+
+	res := r.db.WithContext(ctx).
 		Model(&model.Project{}).
 		Where(&param).
-		Updates(&updatedProject).Error; err != nil {
-		r.ErrorResponse(c, errors.InternalServerError(err.Error()))
+		Updates(&updatedProject)
+	if res.RowsAffected == 0 {
+		r.ErrorResponse(c, errors.BadRequest("Proyek tidak ditemukan"))
+		return
+	} else if res.Error != nil {
+		r.ErrorResponse(c, errors.InternalServerError(res.Error.Error()))
 		return
 	}
 
 	r.SuccessResponse(c, "Berhasil mengubah anggaran proyek", nil, nil)
+}
+
+// @Summary Update Project Status
+// @Description Update project Status
+// @Tags Project
+// @Produce json
+// @Security BearerAuth
+// @Param project_id path int true "project_id"
+// @Param updateProjectStatusBody body model.UpdateProjectStatusBody true "body"
+// @Success 200 {object} model.HTTPResponse{}
+// @Failure 400 {object} model.HTTPResponse{}
+// @Failure 401 {object} model.HTTPResponse{}
+// @Failure 500 {object} model.HTTPResponse{}
+// @Router /v1/project/{project_id}/status [PATCH]
+func (r *rest) UpdateProjectStatus(c *gin.Context) {
+	ctx := c.Request.Context()
+	var param model.ProjectParam
+	var body model.UpdateProjectStatusBody
+
+	if err := r.BindParam(c, &param); err != nil {
+		r.ErrorResponse(c, err)
+		return
+	}
+
+	if err := r.BindBody(c, &body); err != nil {
+		r.ErrorResponse(c, err)
+		return
+	}
+
+	if err := r.validator.ValidateStruct(body); err != nil {
+		r.ErrorResponse(c, errors.BadRequest(err.Error()))
+		return
+	}
+
+	if !model.IsProjectStatusCorrect(body.Status) {
+		r.ErrorResponse(
+			c,
+			errors.BadRequest("Status proyek harus Sedang Berjalan, Selesai, Ditunda, atau Dibatalkan"),
+		)
+		return
+	}
+
+	updatedProject := model.Project{
+		Status: body.Status,
+	}
+
+	res := r.db.WithContext(ctx).
+		Model(&model.Project{}).
+		Where(&param).
+		Updates(&updatedProject)
+	if res.RowsAffected == 0 {
+		r.ErrorResponse(c, errors.BadRequest("Proyek tidak ditemukan"))
+		return
+	} else if res.Error != nil {
+		r.ErrorResponse(c, errors.InternalServerError(res.Error.Error()))
+		return
+	}
+
+	r.SuccessResponse(c, "Berhasil mengubah status proyek", nil, nil)
 }

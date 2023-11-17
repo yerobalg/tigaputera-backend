@@ -26,7 +26,7 @@ func (r *rest) Login(c *gin.Context) {
 	}
 
 	if err := r.validator.ValidateStruct(loginBody); err != nil {
-		r.ErrorResponse(c, err)
+		r.ErrorResponse(c, errors.BadRequest(err.Error()))
 		return
 	}
 
@@ -118,7 +118,7 @@ func (r *rest) ResetPassword(c *gin.Context) {
 	}
 
 	if err := r.validator.ValidateStruct(resetPasswordBody); err != nil {
-		r.ErrorResponse(c, err)
+		r.ErrorResponse(c, errors.BadRequest(err.Error()))
 		return
 	}
 
@@ -165,7 +165,7 @@ func (r *rest) CreateInspector(c *gin.Context) {
 	}
 
 	if err := r.validator.ValidateStruct(createInspectorBody); err != nil {
-		r.ErrorResponse(c, err)
+		r.ErrorResponse(c, errors.BadRequest(err.Error()))
 		return
 	}
 

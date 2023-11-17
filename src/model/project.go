@@ -47,7 +47,8 @@ type Project struct {
 }
 
 type ProjectParam struct {
-	ID int64 `uri:"project_id" param:"id"`
+	ID          int64 `uri:"project_id" param:"id"`
+	InspectorID int64 `param:"inspectorId"`
 	PaginationParam
 }
 
@@ -78,7 +79,11 @@ type UpdateProjectBudgetBody struct {
 	PPH    float64 `json:"pph" validate:"required,min=0,max=1"`
 }
 
-func ValidateProjectType(typeName string) bool {
+type UpdateProjectStatusBody struct {
+	Status string `json:"status" validate:"required"`
+}
+
+func IsProjectTypeCorrect(typeName string) bool {
 	typeNames := []string{
 		string(Drainage),
 		string(Concrete),
@@ -95,7 +100,7 @@ func ValidateProjectType(typeName string) bool {
 	return false
 }
 
-func ValidateProjectStatus(statusName string) bool {
+func IsProjectStatusCorrect(statusName string) bool {
 	statusNames := []string{
 		string(Running),
 		string(Finished),

@@ -99,10 +99,11 @@ func (r *rest) RegisterMiddlewareAndRoutes() {
 		v1.POST("project", r.AuthorizeRole(model.Admin), r.CreateProject)
 		v1.GET("project", r.GetListProject)
 		v1.GET("project/:project_id", r.GetProject)
+		v1.PATCH("project/:project_id/budget", r.UpdateProjectBudget)
 		v1.PATCH(
-			"project/:project_id/budget",
-			r.AuthorizeRole(model.Inspector),
-			r.UpdateProjectBudget,
+			"project/:project_id/status",
+			r.AuthorizeRole(model.Admin),
+			r.UpdateProjectStatus,
 		)
 	}
 
