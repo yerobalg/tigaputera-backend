@@ -134,15 +134,15 @@ func (r *rest) GetListProject(c *gin.Context) {
 
 	if user.Role == string(model.Admin) {
 		err = r.db.WithContext(ctx).
-		Where("name ILIKE ?", "%"+param.Keyword+"%").
-		Model(&model.Project{}).
-		Count(&param.TotalElement).Error
+			Where("name ILIKE ?", "%"+param.Keyword+"%").
+			Model(&model.Project{}).
+			Count(&param.TotalElement).Error
 	} else {
 		err = r.db.WithContext(ctx).
-		Where("name ILIKE ?", "%"+param.Keyword+"%").
-		Where("inspector_id = ?", user.ID).
-		Model(&model.Project{}).
-		Count(&param.TotalElement).Error
+			Where("name ILIKE ?", "%"+param.Keyword+"%").
+			Where("inspector_id = ?", user.ID).
+			Model(&model.Project{}).
+			Count(&param.TotalElement).Error
 	}
 
 	if err != nil {
@@ -153,4 +153,31 @@ func (r *rest) GetListProject(c *gin.Context) {
 	param.ProcessPagination(int64(len(projectListResponses)))
 
 	r.SuccessResponse(c, "Berhasil mendapatkan list proyek", projectListResponses, &param.PaginationParam)
+}
+
+// @Summary Get project
+// @Description Get a project
+// @Tags Project
+// @Produce json
+// @Security BearerAuth
+// @Param project_id path int true "project_id"
+// @Success 200 {object} model.HTTPResponse{data=model.Project}
+// @Failure 500 {object} model.HTTPResponse{}
+// @Router /v1/project/{project_id} [GET]
+func (r *rest) GetProject(c *gin.Context) {
+	ctx := c.Request.Context()
+	var param model.ProjectParam
+
+	if err := r.BindParam(c, &param); err != nil {
+		r.ErrorResponse(c, err)
+		return
+	}
+
+	var project model.Project
+	if err := r.db.WithContext(ctx).Where(&param).First(&project).Error; err != nil {
+		r.ErrorResponse(c, errors.InternalServerError(err.Error()))
+		return
+	}
+
+	r.SuccessResponse(c, "Berhasil mendapatkan proyek", project, nil)
 }

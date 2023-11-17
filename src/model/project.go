@@ -30,20 +30,24 @@ type Project struct {
 	UpdatedBy *int64         `json:"updatedBy"`
 	DeletedBy *int64         `json:"deletedBy"`
 
-	Name        string `gorm:"not null;unique;type:varchar(255)" json:"name"`
-	Description string `gorm:"not null;type:varchar(255)" json:"description"`
-	Type        string `gorm:"not null;type:varchar(255)" json:"type"`
-	DeptName    string `gorm:"not null;type:varchar(255)" json:"deptName"`
-	CompanyName string `gorm:"not null;type:varchar(255)" json:"companyName"`
-	Status      string `gorm:"not null;type:varchar(255)" json:"status"`
-	Volume      *int64 `json:"volume"`
-	Length      *int64 `json:"length"`
-	Width       *int64 `json:"width"`
-	InspectorID int64  `json:"inspectorId"`
-	Inspector   User   `gorm:"foreignKey:InspectorID" json:"inspector"`
+	Name        string  `gorm:"not null;unique;type:varchar(255)" json:"name"`
+	Description string  `gorm:"not null;type:varchar(255)" json:"description"`
+	Type        string  `gorm:"not null;type:varchar(255)" json:"type"`
+	DeptName    string  `gorm:"not null;type:varchar(255)" json:"deptName"`
+	CompanyName string  `gorm:"not null;type:varchar(255)" json:"companyName"`
+	Status      string  `gorm:"not null;type:varchar(255)" json:"status"`
+	Budget      int64   `gorm:"default:0" json:"budget"`
+	PPN         float64 `gorm:"default:0.11" json:"ppn"`
+	PPH         float64 `gorm:"default:0.015" json:"pph"`
+	Volume      *int64  `json:"volume"`
+	Length      *int64  `json:"length"`
+	Width       *int64  `json:"width"`
+	InspectorID int64   `json:"inspectorId"`
+	Inspector   User    `gorm:"foreignKey:InspectorID" json:"inspector"`
 }
 
 type ProjectParam struct {
+	ID int64 `uri:"project_id" param:"id"`
 	PaginationParam
 }
 

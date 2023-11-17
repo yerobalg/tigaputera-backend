@@ -98,6 +98,7 @@ func (r *rest) RegisterMiddlewareAndRoutes() {
 	{
 		v1.POST("project", r.AuthorizeRole(model.Admin), r.CreateProject)
 		v1.GET("project", r.GetListProject)
+		v1.GET("project/:project_id", r.GetProject)
 	}
 
 	// Medicine routes

@@ -7,8 +7,8 @@ import (
 type Role string
 
 const (
-	Admin     Role = "Admin"
-	Inspector Role = "Inspector"
+	Admin     Role = "Direktur"
+	Inspector Role = "Pengawas"
 )
 
 type User struct {
