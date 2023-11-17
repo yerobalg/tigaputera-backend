@@ -2,11 +2,10 @@ package controller
 
 import (
 	"database/sql"
+	"github.com/gin-gonic/gin"
 	"tigaputera-backend/sdk/auth"
 	errors "tigaputera-backend/sdk/error"
 	"tigaputera-backend/src/model"
-
-	"github.com/gin-gonic/gin"
 )
 
 // @Summary Create Project
@@ -174,10 +173,62 @@ func (r *rest) GetProject(c *gin.Context) {
 	}
 
 	var project model.Project
-	if err := r.db.WithContext(ctx).Where(&param).First(&project).Error; err != nil {
+	if err := r.db.WithContext(ctx).
+		Where(&param).
+		First(&project).
+		Error; err != nil {
 		r.ErrorResponse(c, errors.InternalServerError(err.Error()))
 		return
 	}
 
 	r.SuccessResponse(c, "Berhasil mendapatkan proyek", project, nil)
+}
+
+// @Summary Update Project Budget
+// @Description Update project budget
+// @Tags Project
+// @Produce json
+// @Security BearerAuth
+// @Param project_id path int true "project_id"
+// @Param updateProjectBudgetBody body model.UpdateProjectBudgetBody true "body"
+// @Success 200 {object} model.HTTPResponse{}
+// @Failure 400 {object} model.HTTPResponse{}
+// @Failure 401 {object} model.HTTPResponse{}
+// @Failure 500 {object} model.HTTPResponse{}
+// @Router /v1/project/{project_id}/budget [PATCH]
+func (r *rest) UpdateProjectBudget(c *gin.Context) {
+	ctx := c.Request.Context()
+	var param model.ProjectParam
+	var body model.UpdateProjectBudgetBody
+
+	if err := r.BindParam(c, &param); err != nil {
+		r.ErrorResponse(c, err)
+		return
+	}
+
+	if err := r.BindBody(c, &body); err != nil {
+		r.ErrorResponse(c, err)
+		return
+	}
+
+	if err := r.validator.ValidateStruct(body); err != nil {
+		r.ErrorResponse(c, err)
+		return
+	}
+
+	updatedProject := model.Project{
+		Budget: body.Budget,
+		PPN:    body.PPN,
+		PPH:    body.PPH,
+	}
+
+	if err := r.db.WithContext(ctx).
+		Model(&model.Project{}).
+		Where(&param).
+		Updates(&updatedProject).Error; err != nil {
+		r.ErrorResponse(c, errors.InternalServerError(err.Error()))
+		return
+	}
+
+	r.SuccessResponse(c, "Berhasil mengubah anggaran proyek", nil, nil)
 }

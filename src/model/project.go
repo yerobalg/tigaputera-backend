@@ -72,6 +72,12 @@ type ProjectListResponse struct {
 	InspectorName string `json:"inspectorName"`
 }
 
+type UpdateProjectBudgetBody struct {
+	Budget int64   `json:"budget" validate:"required"`
+	PPN    float64 `json:"ppn" validate:"required,min=0,max=1"`
+	PPH    float64 `json:"pph" validate:"required,min=0,max=1"`
+}
+
 func ValidateProjectType(typeName string) bool {
 	typeNames := []string{
 		string(Drainage),
