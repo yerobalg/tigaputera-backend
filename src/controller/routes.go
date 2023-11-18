@@ -105,6 +105,10 @@ func (r *rest) RegisterMiddlewareAndRoutes() {
 			r.AuthorizeRole(model.Admin),
 			r.UpdateProjectStatus,
 		)
+		v1.GET(
+			"project/:project_id/expenditure",
+			r.GetProjectExpenditureList,
+		)
 	}
 
 	// Medicine routes

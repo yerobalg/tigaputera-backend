@@ -17,6 +17,19 @@ type ProjectExpenditure struct {
 	Project     Project `gorm:"foreignKey:ProjectID" json:"project"`
 }
 
+type ProjectExpenditureParam struct {
+	ProjectID int64 `uri:"project_id" param:"project_id"`
+	ID        int64 `uri:"id" param:"id"`
+	PaginationParam
+}
+
+type ProjectExpenditureListResponse struct {
+	ID         int64  `json:"id"`
+	Sequence   int64  `json:"sequence"`
+	Name       string `json:"name"`
+	TotalPrice int64  `json:"totalPrice"`
+}
+
 var InitialProjectExpenditures = []ProjectExpenditure{
 	{
 		Sequence: 1,

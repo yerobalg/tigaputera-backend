@@ -2,11 +2,10 @@ package controller
 
 import (
 	"database/sql"
+	"github.com/gin-gonic/gin"
 	"tigaputera-backend/sdk/auth"
 	errors "tigaputera-backend/sdk/error"
 	"tigaputera-backend/src/model"
-
-	"github.com/gin-gonic/gin"
 )
 
 // @Summary Create Project
