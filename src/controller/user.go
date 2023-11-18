@@ -105,8 +105,8 @@ func (r *rest) ResetPassword(c *gin.Context) {
 		return
 	}
 
-	if !user.IsFirstLogin {
-		r.ErrorResponse(c, errors.BadRequest("Anda sudah pernah melakukan mengganti password"))
+	if !*user.IsFirstLogin {
+		r.ErrorResponse(c, errors.BadRequest("Anda sudah pernah mengganti password"))
 		return
 	}
 
@@ -130,7 +130,7 @@ func (r *rest) ResetPassword(c *gin.Context) {
 
 	updatedUser := model.User{
 		Password:     newPassword,
-		IsFirstLogin: false,
+		IsFirstLogin: new(bool), // false
 	}
 
 	if err := r.db.WithContext(ctx).

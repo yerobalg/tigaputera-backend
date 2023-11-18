@@ -23,7 +23,7 @@ type User struct {
 	Username     string `gorm:"not null;unique;type:varchar(255)" json:"username"`
 	Name         string `gorm:"not null;type:varchar(255)" json:"name"`
 	Password     string `gorm:"not null;type:text" json:"-"`
-	IsFirstLogin bool   `gorm:"default:true" json:"isFirstLogin"`
+	IsFirstLogin *bool  `gorm:"default:true" json:"isFirstLogin"`
 	Role         Role   `gorm:"type:varchar(255);default:Inspector;index" json:"role"`
 }
 

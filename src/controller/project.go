@@ -2,10 +2,11 @@ package controller
 
 import (
 	"database/sql"
-	"github.com/gin-gonic/gin"
 	"tigaputera-backend/sdk/auth"
 	errors "tigaputera-backend/sdk/error"
 	"tigaputera-backend/src/model"
+
+	"github.com/gin-gonic/gin"
 )
 
 // @Summary Create Project
@@ -51,11 +52,32 @@ func (r *rest) CreateProject(c *gin.Context) {
 		InspectorID: body.InspectorID,
 	}
 
-	err := r.db.WithContext(ctx).Create(&project).Error
+	tx := r.db.WithContext(ctx).Begin()
+
+	err := tx.Create(&project).Error
 	if err != nil && r.isUniqueKeyViolation(err) {
+		tx.Rollback()
 		r.ErrorResponse(c, errors.BadRequest("Nama proyek sudah ada"))
 		return
 	} else if err != nil {
+		tx.Rollback()
+		r.ErrorResponse(c, errors.InternalServerError(err.Error()))
+		return
+	}
+
+	initialProjectExpenditures := model.InitialProjectExpenditures
+	for i := range initialProjectExpenditures {
+		initialProjectExpenditures[i].ProjectID = project.ID
+	}
+
+	if err := tx.Create(&initialProjectExpenditures).Error; err != nil {
+		tx.Rollback()
+		r.ErrorResponse(c, errors.InternalServerError(err.Error()))
+		return
+	}
+
+	if err := tx.Commit().Error; err != nil {
+		tx.Rollback()
 		r.ErrorResponse(c, errors.InternalServerError(err.Error()))
 		return
 	}
