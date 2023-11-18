@@ -11,7 +11,7 @@ import (
 
 // @Summary Get List Project Expenditure
 // @Description Get list project expenditure
-// @Tags Project
+// @Tags Project Expenditure
 // @Produce json
 // @Security BearerAuth
 // @Param project_id path  int true "project_id"
@@ -64,7 +64,7 @@ func (r *rest) GetProjectExpenditureList(c *gin.Context) {
 
 // @Summary Create Project Expenditure
 // @Description Create new project expenditure
-// @Tags Project
+// @Tags Project Expenditure
 // @Produce json
 // @Security BearerAuth
 // @Param project_id path int true "project_id"

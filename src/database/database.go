@@ -61,6 +61,7 @@ func (db *DB) Migrate() error {
 		&model.User{},
 		&model.Project{},
 		&model.ProjectExpenditure{},
+		&model.ExpenditureDetail{},
 	)
 }
 
