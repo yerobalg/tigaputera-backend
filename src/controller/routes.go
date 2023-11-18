@@ -109,6 +109,10 @@ func (r *rest) RegisterMiddlewareAndRoutes() {
 			"project/:project_id/expenditure",
 			r.GetProjectExpenditureList,
 		)
+		v1.POST(
+			"project/:project_id/expenditure",
+			r.CreateProjectExpenditure,
+		)
 	}
 
 	// Medicine routes

@@ -79,3 +79,7 @@ func getRequestMetadata(ctx *gin.Context) model.Meta {
 func (r *rest) isUniqueKeyViolation(err error) bool {
 	return strings.Contains(err.Error(), "duplicate key value violates unique constraint")
 }
+
+func (r *rest) isNoRecordFound(err error) bool {
+	return strings.Contains(err.Error(), "record not found")
+}

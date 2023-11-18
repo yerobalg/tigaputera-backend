@@ -30,6 +30,11 @@ type ProjectExpenditureListResponse struct {
 	TotalPrice int64  `json:"totalPrice"`
 }
 
+type CreateProjectExpenditureBody struct {
+	Name        string `json:"name" binding:"required"`
+	IsFixedCost *bool    `json:"isFixedCost" binding:"required"`
+}
+
 var InitialProjectExpenditures = []ProjectExpenditure{
 	{
 		Sequence: 1,
