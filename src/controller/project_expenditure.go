@@ -13,9 +13,7 @@ import (
 // @Produce json
 // @Security BearerAuth
 // @Param project_id path  int true "project_id"
-// @Param page query int false "page"
-// @Param limit query int false "limit"
-// @Success 200 {object} model.HTTPResponse{data=[]model.ProjectExpenditureListResponse}
+// @Success 200 {object} model.HTTPResponse{data=model.ProjectExpenditureListResponse}
 // @Failure 401 {object} model.HTTPResponse{}
 // @Failure 500 {object} model.HTTPResponse{}
 // @Router /v1/project/{project_id}/expenditure [GET]
@@ -28,35 +26,41 @@ func (r *rest) GetProjectExpenditureList(c *gin.Context) {
 		return
 	}
 
-	param.PaginationParam.SetDefaultPagination()
-	projectExpenditures := []model.ProjectExpenditureListResponse{}
+	var projectExpenditureResponse model.ProjectExpenditureListResponse
+	var projectExpenditures []model.ProjectExpenditureList
 
-	if err := r.db.WithContext(ctx).
+	rows, err := r.db.WithContext(ctx).
 		Model(&model.ProjectExpenditure{}).
 		Where(&param).
-		Limit(int(param.Limit)).
-		Offset(int(param.Offset)).
 		Order("sequence").
-		Find(&projectExpenditures).Error; err != nil {
-		r.ErrorResponse(c, errors.InternalServerError(err.Error()))
-	}
-
-	if err := r.db.WithContext(ctx).
-		Model(&model.ProjectExpenditure{}).
-		Where(&param).
-		Count(&param.TotalElement).
-		Error; err != nil {
+		Find(&projectExpenditures).
+		Rows()
+	if err != nil {
 		r.ErrorResponse(c, errors.InternalServerError(err.Error()))
 		return
 	}
 
-	param.ProcessPagination(int64(len(projectExpenditures)))
+	defer rows.Close()
+	for rows.Next() {
+		var projectExpenditure model.ProjectExpenditureList
+		if err := r.db.ScanRows(rows, &projectExpenditure); err != nil {
+			r.ErrorResponse(c, errors.InternalServerError(err.Error()))
+			return
+		}
+
+		projectExpenditureResponse.Expenditures = append(
+			projectExpenditureResponse.Expenditures,
+			projectExpenditure,
+		)
+
+		projectExpenditureResponse.SumTotal += projectExpenditure.TotalPrice
+	}
 
 	r.SuccessResponse(
 		c,
 		"Berhasil mendapatkan list pengeluaran proyek",
 		projectExpenditures,
-		&param.PaginationParam,
+		nil,
 	)
 }
 
