@@ -5,6 +5,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"tigaputera-backend/sdk/auth"
 	errors "tigaputera-backend/sdk/error"
+	"tigaputera-backend/sdk/number"
 	"tigaputera-backend/src/model"
 )
 
@@ -208,6 +209,75 @@ func (r *rest) GetProject(c *gin.Context) {
 	}
 
 	r.SuccessResponse(c, "Berhasil mendapatkan proyek", project, nil)
+}
+
+// @Summary Get project detail
+// @Description Get a project with its budget
+// @Tags Project
+// @Produce json
+// @Security BearerAuth
+// @Param project_id path int true "project_id"
+// @Success 200 {object} model.HTTPResponse{data=model.ProjectDetailResponse}
+// @Failure 400 {object} model.HTTPResponse{}
+// @Failure 500 {object} model.HTTPResponse{}
+// @Router /v1/project/{project_id}/detail [GET]
+func (r *rest) GetProjectDetail(c *gin.Context) {
+	ctx := c.Request.Context()
+	var param model.ProjectParam
+
+	if err := r.BindParam(c, &param); err != nil {
+		r.ErrorResponse(c, err)
+		return
+	}
+
+	var project model.Project
+	if err := r.db.WithContext(ctx).
+		Where(&param).
+		InnerJoins("Inspector").
+		First(&project).
+		Error; err != nil {
+		r.ErrorResponse(c, errors.InternalServerError(err.Error()))
+		return
+	}
+
+	ppnPrice := int64(float64(project.Budget) * project.PPN * -1)
+	pphPrice := int64(float64(project.Budget) * project.PPH * -1)
+	totalBudget := project.Budget + ppnPrice + pphPrice
+
+	projectBudget := model.ProjectBudget{
+		Budgets: []model.Budget{
+			{
+				Name:  "Pagu Pekerjaan",
+				Price: number.ConvertToRupiah(project.Budget),
+			},
+			{
+				Name:  "PPN",
+				Price: number.ConvertToRupiah(ppnPrice),
+			},
+			{
+				Name:  "PPh",
+				Price: number.ConvertToRupiah(pphPrice),
+			},
+		},
+		Total: number.ConvertToRupiah(totalBudget),
+	}
+
+	projectDetailResponse := model.ProjectDetailResponse{
+		ID:            project.ID,
+		Name:          project.Name,
+		Description:   project.Description,
+		Type:          model.GetProjectTypeStyle(project.Type),
+		Status:        model.GetProjectStatusStyle(project.Status),
+		DeptName:      project.DeptName,
+		CompanyName:   project.CompanyName,
+		Volume:        project.Volume,
+		Length:        project.Length,
+		Width:         project.Width,
+		InspectorName: project.Inspector.Name,
+		ProjectBudget: projectBudget,
+	}
+
+	r.SuccessResponse(c, "Berhasil mendapatkan proyek", projectDetailResponse, nil)
 }
 
 // @Summary Update Project Budget

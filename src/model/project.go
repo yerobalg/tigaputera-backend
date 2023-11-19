@@ -86,6 +86,31 @@ type ProjectListResponse struct {
 	InspectorName string     `json:"inspectorName"`
 }
 
+type ProjectDetailResponse struct {
+	ID            int64         `json:"id"`
+	Name          string        `json:"name"`
+	Description   string        `json:"description"`
+	Type          LabelStyle    `json:"type"`
+	Status        LabelStyle    `json:"status"`
+	DeptName      string        `json:"deptName"`
+	CompanyName   string        `json:"companyName"`
+	Volume        *int64        `json:"volume"`
+	Length        *int64        `json:"length"`
+	Width         *int64        `json:"width"`
+	InspectorName string        `json:"inspectorName"`
+	ProjectBudget ProjectBudget `json:"projectBudget"`
+}
+
+type ProjectBudget struct {
+	Budgets []Budget `json:"budgets"`
+	Total   string   `json:"total"`
+}
+
+type Budget struct {
+	Name  string `json:"name"`
+	Price string `json:"price"`
+}
+
 type LabelStyle struct {
 	Name         string `json:"name"`
 	BGColorHex   string `json:"bgColorHex"`
