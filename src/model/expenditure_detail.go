@@ -15,7 +15,11 @@ type ExpenditureDetail struct {
 	TotalPrice    int64              `json:"totalPrice"`
 	ReceiptURL    string             `json:"receiptUrl"`
 	ExpenditureID int64              `json:"expenditureId"`
+	ProjectID     int64              `json:"projectId"`
+	InspectorID   int64              `json:"inspectorId"`
 	Expenditure   ProjectExpenditure `gorm:"foreignKey:ExpenditureID" json:"expenditure"`
+	Project       Project            `gorm:"foreignKey:ProjectID" json:"project"`
+	Inspector     User               `gorm:"foreignKey:InspectorID" json:"inspector"`
 }
 
 type CreateExpenditureDetailBody struct {
@@ -29,4 +33,19 @@ type ExpenditureDetailParam struct {
 	ExpenditureID       int64 `uri:"expenditure_id" param:"expenditure_id"`
 	ExpenditureDetailID int64 `uri:"expenditure_detail_id" param:"expenditure_detail_id"`
 	PaginationParam
+}
+
+type ExpenditureDetailList struct {
+	Name       string `json:"name"`
+	Price      int64  `json:"price"`
+	Amount     int64  `json:"amount"`
+	TotalPrice int64  `json:"totalPrice"`
+}
+
+type ExpenditureDetailListResponse struct {
+	ExpenditureName string                  `json:"expenditureName"`
+	ProjectName     string                  `json:"projectName"`
+	InspectorName   string                  `json:"inspectorName"`
+	Details         []ExpenditureDetailList `json:"details"`
+	SumTotal        int64                   `json:"sumTotal"`
 }

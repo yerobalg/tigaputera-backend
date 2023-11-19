@@ -14,7 +14,7 @@ import (
 // @Security BearerAuth
 // @Param project_id path  int true "project_id"
 // @Param expenditure_id path  int true "expenditure_id"
-// @Param body body CreateExpenditureDetailBody true "body"
+// @Param createExpenditureDetailBody body model.CreateExpenditureDetailBody true "body"
 // @Success 200 {object} model.HTTPResponse{}
 // @Failure 400 {object} model.HTTPResponse{}
 // @Failure 401 {object} model.HTTPResponse{}
@@ -61,6 +61,8 @@ func (r *rest) CreateProjectExpenditureDetail(c *gin.Context) {
 		TotalPrice:    body.Price * body.Amount,
 		ReceiptURL:    "", // TODO: Upload receipt
 		ExpenditureID: projectExpenditure.ID,
+		ProjectID:     projectExpenditure.ProjectID,
+		InspectorID:   user.ID,
 	}
 
 	projectExpenditure.TotalPrice += expenditureDetail.TotalPrice
@@ -86,4 +88,77 @@ func (r *rest) CreateProjectExpenditureDetail(c *gin.Context) {
 	}
 
 	r.SuccessResponse(c, "Berhasil membuat detail pengeluaran proyek", nil, nil)
+}
+
+// @Summary Get List Project Expenditure Detail
+// @Description Get list project expenditure detail
+// @Tags Project Expenditure Detail
+// @Produce json
+// @Security BearerAuth
+// @Param project_id path  int true "project_id"
+// @Param expenditure_id path  int true "expenditure_id"
+// @Success 200 {object} model.HTTPResponse{data=model.ExpenditureDetailListResponse}
+// @Failure 401 {object} model.HTTPResponse{}
+// @Failure 500 {object} model.HTTPResponse{}
+// @Router /v1/project/{project_id}/expenditure/{expenditure_id}/detail [GET]
+func (r *rest) GetProjectExpenditureDetailList(c *gin.Context) {
+	ctx := c.Request.Context()
+	var param model.ExpenditureDetailParam
+
+	if err := r.BindParam(c, &param); err != nil {
+		r.ErrorResponse(c, err)
+		return
+	}
+
+	rows, err := r.db.WithContext(ctx).
+		Model(&model.ExpenditureDetail{}).
+		InnerJoins(
+			"Expenditure",
+			r.db.Where(&model.ProjectExpenditure{ProjectID: param.ProjectID}),
+		).
+		InnerJoins(
+			"Project",
+			r.db.Where(&model.Project{ID: param.ProjectID}),
+		).
+		InnerJoins("Project.Inspector").
+		Rows()
+
+	if err != nil && r.isNoRecordFound(err) {
+		r.ErrorResponse(
+			c,
+			errors.BadRequest("pengeluaran proyek tidak ditemukan"),
+		)
+		return
+	} else if err != nil {
+		r.ErrorResponse(c, errors.InternalServerError(err.Error()))
+		return
+	}
+
+	defer rows.Close()
+	var expenditureDetailResponse model.ExpenditureDetailListResponse
+	for rows.Next() {
+		var expenditureDetail model.ExpenditureDetail
+		if err := r.db.ScanRows(rows, &expenditureDetail); err != nil {
+			r.ErrorResponse(c, errors.InternalServerError(err.Error()))
+			return
+		}
+
+		expenditureDetailResponse.ExpenditureName = expenditureDetail.Expenditure.Name
+		expenditureDetailResponse.ProjectName = expenditureDetail.Project.Name
+		expenditureDetailResponse.InspectorName = expenditureDetail.Project.Inspector.Name
+
+		expenditureDetailList := model.ExpenditureDetailList{
+			Name:       expenditureDetail.Name,
+			Price:      expenditureDetail.Price,
+			Amount:     expenditureDetail.Amount,
+			TotalPrice: expenditureDetail.TotalPrice,
+		}
+
+		expenditureDetailResponse.Details = append(
+			expenditureDetailResponse.Details,
+			expenditureDetailList,
+		)
+	}
+
+	r.SuccessResponse(c, "Berhasil mendapatkan detail pengeluaran proyek", expenditureDetailResponse, nil)
 }
