@@ -6,6 +6,7 @@ import (
 
 type ProjectType string
 type ProjectStatus string
+type Color string
 
 const (
 	Drainage ProjectType = "Drainase"
@@ -19,6 +20,18 @@ const (
 	Finished  ProjectStatus = "Selesai"
 	Postponed ProjectStatus = "Ditunda"
 	Canceled  ProjectStatus = "Dibatalkan"
+)
+
+const (
+	White     Color = "FFFFFF"
+	LightGrey Color = "DEE2E6"
+	Blue      Color = "3A57E8"
+	Black     Color = "001129"
+	Orange    Color = "F16A1B"
+	Green     Color = "1AA053"
+	DarkGrey  Color = "6C757D"
+	Turquoise Color = "079AA2"
+	Red       Color = "C03221"
 )
 
 type Project struct {
@@ -65,12 +78,18 @@ type CreateProjectBody struct {
 }
 
 type ProjectListResponse struct {
-	ID            int64  `json:"id"`
-	Name          string `json:"name"`
-	Type          string `json:"type"`
-	Status        string `json:"status"`
-	UpdatedAt     int64  `json:"updatedAt"`
-	InspectorName string `json:"inspectorName"`
+	ID            int64      `json:"id"`
+	Name          string     `json:"name"`
+	Type          LabelStyle `json:"type"`
+	Status        LabelStyle `json:"status"`
+	UpdatedAt     int64      `json:"updatedAt"`
+	InspectorName string     `json:"inspectorName"`
+}
+
+type LabelStyle struct {
+	Name         string `json:"name"`
+	BGColorHex   string `json:"bgColorHex"`
+	TextColorHex string `json:"textColorHex"`
 }
 
 type UpdateProjectBudgetBody struct {
@@ -115,4 +134,43 @@ func IsProjectStatusCorrect(statusName string) bool {
 	}
 
 	return false
+}
+
+func GetProjectTypeStyle(projectType string) LabelStyle {
+	labelStyle := LabelStyle{
+		Name:         projectType,
+		TextColorHex: string(White),
+	}
+	switch projectType {
+	case string(Drainage):
+		labelStyle.BGColorHex = string(Blue)
+	case string(Concrete):
+		labelStyle.BGColorHex = string(Black)
+	case string(Ashpalt):
+		labelStyle.BGColorHex = string(LightGrey)
+		labelStyle.TextColorHex = string(Black)
+	case string(Building):
+		labelStyle.BGColorHex = string(Orange)
+	}
+
+	return labelStyle
+}
+
+func GetProjectStatusStyle(projectStatus string) LabelStyle {
+	labelStyle := LabelStyle{
+		Name:         projectStatus,
+		TextColorHex: string(White),
+	}
+	switch projectStatus {
+	case string(Running):
+		labelStyle.BGColorHex = string(Turquoise)
+	case string(Finished):
+		labelStyle.BGColorHex = string(Green)
+	case string(Postponed):
+		labelStyle.BGColorHex = string(DarkGrey)
+	case string(Canceled):
+		labelStyle.BGColorHex = string(Red)
+	}
+
+	return labelStyle
 }

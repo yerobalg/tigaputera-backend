@@ -149,8 +149,8 @@ func (r *rest) GetListProject(c *gin.Context) {
 		projectListResponse := model.ProjectListResponse{
 			ID:            project.ID,
 			Name:          project.Name,
-			Type:          project.Type,
-			Status:        project.Status,
+			Type:          model.GetProjectTypeStyle(project.Type),
+			Status:        model.GetProjectStatusStyle(project.Status),
 			UpdatedAt:     project.UpdatedAt,
 			InspectorName: project.Inspector.Name,
 		}
