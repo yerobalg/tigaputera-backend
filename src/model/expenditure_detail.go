@@ -17,3 +17,16 @@ type ExpenditureDetail struct {
 	ExpenditureID int64              `json:"expenditureId"`
 	Expenditure   ProjectExpenditure `gorm:"foreignKey:ExpenditureID" json:"expenditure"`
 }
+
+type CreateExpenditureDetailBody struct {
+	Name   string `json:"name" validate:"required"`
+	Price  int64  `json:"price" validate:"required"`
+	Amount int64  `json:"amount" validate:"required"`
+}
+
+type ExpenditureDetailParam struct {
+	ProjectID           int64 `uri:"project_id" param:"project_id"`
+	ExpenditureID       int64 `uri:"expenditure_id" param:"expenditure_id"`
+	ExpenditureDetailID int64 `uri:"expenditure_detail_id" param:"expenditure_detail_id"`
+	PaginationParam
+}

@@ -1,12 +1,10 @@
 package controller
 
 import (
-	"fmt"
+	"github.com/gin-gonic/gin"
 	"tigaputera-backend/sdk/auth"
 	errors "tigaputera-backend/sdk/error"
 	"tigaputera-backend/src/model"
-
-	"github.com/gin-gonic/gin"
 )
 
 // @Summary Get List Project Expenditure
@@ -89,6 +87,11 @@ func (r *rest) CreateProjectExpenditure(c *gin.Context) {
 		return
 	}
 
+	if err := r.validator.ValidateStruct(body); err != nil {
+		r.ErrorResponse(c, errors.BadRequest(err.Error()))
+		return
+	}
+
 	user := auth.GetUser(ctx)
 
 	// Get latest sequence
@@ -105,8 +108,6 @@ func (r *rest) CreateProjectExpenditure(c *gin.Context) {
 	} else if err != nil {
 		r.ErrorResponse(c, errors.InternalServerError(err.Error()))
 	}
-
-	fmt.Println("seq ",latestProjectExpenditure)
 
 	projectExpenditure := model.ProjectExpenditure{
 		ProjectID:   param.ProjectID,

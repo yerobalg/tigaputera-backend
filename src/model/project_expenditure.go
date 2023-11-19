@@ -31,8 +31,8 @@ type ProjectExpenditureListResponse struct {
 }
 
 type CreateProjectExpenditureBody struct {
-	Name        string `json:"name" binding:"required"`
-	IsFixedCost *bool    `json:"isFixedCost" binding:"required"`
+	Name        string `json:"name" validate:"required"`
+	IsFixedCost *bool  `json:"isFixedCost" validate:"required"`
 }
 
 var InitialProjectExpenditures = []ProjectExpenditure{
