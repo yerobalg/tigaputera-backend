@@ -26,20 +26,17 @@ func (r *rest) GetProjectExpenditureList(c *gin.Context) {
 		return
 	}
 
-	var projectExpenditureResponse model.ProjectExpenditureListResponse
-	var projectExpenditures []model.ProjectExpenditureList
-
 	rows, err := r.db.WithContext(ctx).
 		Model(&model.ProjectExpenditure{}).
 		Where(&param).
 		Order("sequence").
-		Find(&projectExpenditures).
 		Rows()
 	if err != nil {
 		r.ErrorResponse(c, errors.InternalServerError(err.Error()))
 		return
 	}
 
+	var projectExpenditureResponse model.ProjectExpenditureListResponse
 	defer rows.Close()
 	for rows.Next() {
 		var projectExpenditure model.ProjectExpenditureList
@@ -59,7 +56,7 @@ func (r *rest) GetProjectExpenditureList(c *gin.Context) {
 	r.SuccessResponse(
 		c,
 		"Berhasil mendapatkan list pengeluaran proyek",
-		projectExpenditures,
+		projectExpenditureResponse,
 		nil,
 	)
 }
@@ -102,7 +99,10 @@ func (r *rest) CreateProjectExpenditure(c *gin.Context) {
 	var latestProjectExpenditure model.ProjectExpenditure
 	err := r.db.WithContext(ctx).
 		Where("project_expenditures.project_id = ?", param.ProjectID).
-		InnerJoins("Project", r.db.Where(&model.Project{InspectorID: user.ID})).
+		InnerJoins(
+			"Project",
+			r.db.Where(&model.Project{InspectorID: user.ID}),
+		).
 		Order("sequence desc").
 		Take(&latestProjectExpenditure).Error
 
