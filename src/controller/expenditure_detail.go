@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"fmt"
 	"github.com/gin-gonic/gin"
 	"tigaputera-backend/sdk/auth"
 	errors "tigaputera-backend/sdk/error"
@@ -54,6 +55,39 @@ func (r *rest) CreateProjectExpenditureDetail(c *gin.Context) {
 		return
 	}
 
+	// Get inspector's balance
+	var inspectorLedger model.InspectorLedger
+	inspectorLedgerParam := model.InspectorLedgerParam{
+		InspectorID: user.ID,
+	}
+	err = r.db.WithContext(ctx).
+		Where(&inspectorLedgerParam).
+		Order("created_at desc").
+		Take(&inspectorLedger).Error
+
+	if err != nil && r.isNoRecordFound(err) {
+		r.ErrorResponse(c, errors.BadRequest("Akun tidak ditemukan"))
+		return
+	} else if err != nil {
+		r.ErrorResponse(c, errors.InternalServerError(err.Error()))
+	}
+
+	totalPrice := body.Price * body.Amount
+	var newLedger model.InspectorLedger
+
+	if inspectorLedger.Balance < totalPrice {
+		r.ErrorResponse(c, errors.BadRequest("Saldo tidak mencukupi"))
+		return
+	} else {
+		newLedger = model.InspectorLedger{
+			InspectorID: user.ID,
+			LedgerType:  model.Credit,
+			Ref:         fmt.Sprintf("%s Proyek %s", body.Name, projectExpenditure.Project.Name),
+			Amount:      totalPrice,
+			Balance:     inspectorLedger.Balance - totalPrice,
+		}
+	}
+
 	expenditureDetail := model.ExpenditureDetail{
 		Name:          body.Name,
 		Price:         body.Price,
@@ -71,6 +105,12 @@ func (r *rest) CreateProjectExpenditureDetail(c *gin.Context) {
 	tx := r.db.WithContext(ctx).Begin()
 
 	if err := tx.Create(&expenditureDetail).Error; err != nil {
+		tx.Rollback()
+		r.ErrorResponse(c, errors.InternalServerError(err.Error()))
+		return
+	}
+
+	if err := tx.Create(&newLedger).Error; err != nil {
 		tx.Rollback()
 		r.ErrorResponse(c, errors.InternalServerError(err.Error()))
 		return
