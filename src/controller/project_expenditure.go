@@ -7,60 +7,6 @@ import (
 	"tigaputera-backend/src/model"
 )
 
-// @Summary Get List Project Expenditure
-// @Description Get list project expenditure
-// @Tags Project Expenditure
-// @Produce json
-// @Security BearerAuth
-// @Param project_id path  int true "project_id"
-// @Success 200 {object} model.HTTPResponse{data=model.ProjectExpenditureListResponse}
-// @Failure 401 {object} model.HTTPResponse{}
-// @Failure 500 {object} model.HTTPResponse{}
-// @Router /v1/project/{project_id}/expenditure [GET]
-func (r *rest) GetProjectExpenditureList(c *gin.Context) {
-	ctx := c.Request.Context()
-	var param model.ProjectExpenditureParam
-
-	if err := r.BindParam(c, &param); err != nil {
-		r.ErrorResponse(c, err)
-		return
-	}
-
-	rows, err := r.db.WithContext(ctx).
-		Model(&model.ProjectExpenditure{}).
-		Where(&param).
-		Order("sequence").
-		Rows()
-	if err != nil {
-		r.ErrorResponse(c, errors.InternalServerError(err.Error()))
-		return
-	}
-
-	var projectExpenditureResponse model.ProjectExpenditureListResponse
-	defer rows.Close()
-	for rows.Next() {
-		var projectExpenditure model.ProjectExpenditureList
-		if err := r.db.ScanRows(rows, &projectExpenditure); err != nil {
-			r.ErrorResponse(c, errors.InternalServerError(err.Error()))
-			return
-		}
-
-		projectExpenditureResponse.Expenditures = append(
-			projectExpenditureResponse.Expenditures,
-			projectExpenditure,
-		)
-
-		projectExpenditureResponse.SumTotal += projectExpenditure.TotalPrice
-	}
-
-	r.SuccessResponse(
-		c,
-		"Berhasil mendapatkan list pengeluaran proyek",
-		projectExpenditureResponse,
-		nil,
-	)
-}
-
 // @Summary Create Project Expenditure
 // @Description Create new project expenditure
 // @Tags Project Expenditure

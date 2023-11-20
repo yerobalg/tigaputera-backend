@@ -60,8 +60,7 @@ type Project struct {
 }
 
 type ProjectParam struct {
-	ID          int64 `uri:"project_id" param:"id"`
-	InspectorID int64 `param:"inspectorId"`
+	ID int64 `uri:"project_id" param:"id"`
 	PaginationParam
 }
 
@@ -87,23 +86,27 @@ type ProjectListResponse struct {
 }
 
 type ProjectDetailResponse struct {
-	ID            int64         `json:"id"`
-	Name          string        `json:"name"`
-	Description   string        `json:"description"`
-	Type          LabelStyle    `json:"type"`
-	Status        LabelStyle    `json:"status"`
-	DeptName      string        `json:"deptName"`
-	CompanyName   string        `json:"companyName"`
-	Volume        *int64        `json:"volume"`
-	Length        *int64        `json:"length"`
-	Width         *int64        `json:"width"`
-	InspectorName string        `json:"inspectorName"`
-	ProjectBudget ProjectBudget `json:"projectBudget"`
+	ID                 int64                      `json:"id"`
+	Name               string                     `json:"name"`
+	Description        string                     `json:"description"`
+	Type               LabelStyle                 `json:"type"`
+	Status             LabelStyle                 `json:"status"`
+	DeptName           string                     `json:"deptName"`
+	CompanyName        string                     `json:"companyName"`
+	Volume             *int64                     `json:"volume"`
+	Length             *int64                     `json:"length"`
+	Width              *int64                     `json:"width"`
+	InspectorName      string                     `json:"inspectorName"`
+	ProjectBudget      ProjectBudget              `json:"projectBudget"`
+	ProjectExpenditure ProjectExpenditureResponse `json:"projectExpenditure"`
+	Margin             string                     `json:"margin"`
 }
 
 type ProjectBudget struct {
-	Budgets []Budget `json:"budgets"`
-	Total   string   `json:"total"`
+	Budgets       []Budget `json:"budgets"`
+	PPNPercentage float64  `json:"ppnPercentage"`
+	PPHPercentage float64  `json:"pphPercentage"`
+	Total         string   `json:"total"`
 }
 
 type Budget struct {

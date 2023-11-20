@@ -23,16 +23,22 @@ type ProjectExpenditureParam struct {
 	PaginationParam
 }
 
-type ProjectExpenditureList struct {
-	ID         int64  `json:"id"`
-	Sequence   int64  `json:"sequence"`
-	Name       string `json:"name"`
-	TotalPrice int64  `json:"totalPrice"`
-}
-
 type ProjectExpenditureListResponse struct {
 	Expenditures []ProjectExpenditureList `json:"expenditures"`
-	SumTotal     int64                    `json:"sumTotal"`
+	SumTotal     string                   `json:"sumTotal"`
+}
+
+type ProjectExpenditureResponse struct {
+	Expenditures []ProjectExpenditureList `json:"expenditures"`
+	SumTotal     string                   `json:"sumTotal"`
+}
+
+type ProjectExpenditureList struct {
+	ID          int64  `json:"id"`
+	Sequence    int64  `json:"sequence"`
+	Name        string `json:"name"`
+	TotalPrice  string `json:"totalPrice"`
+	IsFixedCost bool   `json:"isFixedCost"`
 }
 
 type CreateProjectExpenditureBody struct {

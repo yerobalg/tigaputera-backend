@@ -259,22 +259,66 @@ func (r *rest) GetProjectDetail(c *gin.Context) {
 				Price: number.ConvertToRupiah(pphPrice),
 			},
 		},
-		Total: number.ConvertToRupiah(totalBudget),
+		PPNPercentage: project.PPN * 100,
+		PPHPercentage: project.PPH * 100,
+		Total:         number.ConvertToRupiah(totalBudget),
 	}
 
+	expenditureParam := model.ProjectExpenditureParam{
+		ProjectID: param.ID,
+	}
+
+	rows, err := r.db.WithContext(ctx).
+		Model(&model.ProjectExpenditure{}).
+		Where(&expenditureParam).
+		Order("sequence").
+		Rows()
+	if err != nil {
+		r.ErrorResponse(c, errors.InternalServerError(err.Error()))
+		return
+	}
+
+	defer rows.Close()
+	var projectExpenditure model.ProjectExpenditureResponse
+	expenditures := []model.ProjectExpenditureList{}
+	var totalExpenditure int64
+
+	for rows.Next() {
+		var expenditure model.ProjectExpenditure
+		if err := r.db.ScanRows(rows, &expenditure); err != nil {
+			r.ErrorResponse(c, errors.InternalServerError(err.Error()))
+			return
+		}
+
+		expenditures = append(expenditures, model.ProjectExpenditureList{
+			ID:          expenditure.ID,
+			Sequence:    expenditure.Sequence,
+			Name:        expenditure.Name,
+			TotalPrice:  number.ConvertToRupiah(expenditure.TotalPrice),
+			IsFixedCost: *expenditure.IsFixedCost,
+		})
+
+		totalExpenditure += expenditure.TotalPrice
+	}
+
+	projectExpenditure.Expenditures = expenditures
+	projectExpenditure.SumTotal = number.ConvertToRupiah(totalExpenditure)
+
 	projectDetailResponse := model.ProjectDetailResponse{
-		ID:            project.ID,
-		Name:          project.Name,
-		Description:   project.Description,
-		Type:          model.GetProjectTypeStyle(project.Type),
-		Status:        model.GetProjectStatusStyle(project.Status),
-		DeptName:      project.DeptName,
-		CompanyName:   project.CompanyName,
-		Volume:        project.Volume,
-		Length:        project.Length,
-		Width:         project.Width,
-		InspectorName: project.Inspector.Name,
-		ProjectBudget: projectBudget,
+		ID:                 project.ID,
+		Name:               project.Name,
+		Description:        project.Description,
+		Type:               model.GetProjectTypeStyle(project.Type),
+		Status:             model.GetProjectStatusStyle(project.Status),
+		DeptName:           project.DeptName,
+		CompanyName:        project.CompanyName,
+		Volume:             project.Volume,
+		Length:             project.Length,
+		Width:              project.Width,
+		InspectorName:      project.Inspector.Name,
+		ProjectBudget:      projectBudget,
+		ProjectExpenditure: projectExpenditure,
+		Margin:             number.ConvertToRupiah(totalBudget - totalExpenditure),
 	}
 
 	r.SuccessResponse(c, "Berhasil mendapatkan proyek", projectDetailResponse, nil)
@@ -317,9 +361,6 @@ func (r *rest) UpdateProjectBudget(c *gin.Context) {
 		PPN:    body.PPN,
 		PPH:    body.PPH,
 	}
-
-	user := auth.GetUser(ctx)
-	param.InspectorID = user.ID
 
 	res := r.db.WithContext(ctx).
 		Model(&model.Project{}).
