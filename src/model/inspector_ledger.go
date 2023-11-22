@@ -7,8 +7,8 @@ import (
 type LedgerType string
 
 const (
-	Debit  LedgerType = "Debit"
-	Credit LedgerType = "Credit"
+	Debit  LedgerType = "Pemasukan"
+	Credit LedgerType = "Pengeluaran"
 )
 
 type InspectorLedger struct {
@@ -16,19 +16,25 @@ type InspectorLedger struct {
 	CreatedAt int64          `json:"createdAt"`
 	UpdatedAt int64          `json:"updatedAt"`
 	DeletedAt gorm.DeletedAt `gorm:"index" json:"-"`
-	CreatedBy *int64         `json:"createdBy"`
+	CreatedBy *int64         `gorm:"index" json:"createdBy"`
 	UpdatedBy *int64         `json:"updatedBy"`
 	DeletedBy *int64         `json:"deletedBy"`
 
-	InspectorID int64      `json:"inspectorId"`
-	LedgerType  LedgerType `gorm:"not null;type:varchar(255)" json:"ledgerType"`
-	Ref         string     `gorm:"default:'Direktur'" json:"ref"`
-	Amount      int64      `gorm:"not null" json:"amount"`
-	Balance     int64      `gorm:"default:0" json:"balance"`
-	Inspector   User       `gorm:"foreignKey:InspectorID" json:"inspector"`
+	InspectorID    int64      `json:"inspectorId"`
+	LedgerType     LedgerType `gorm:"not null;type:varchar(255)" json:"ledgerType"`
+	Ref            string     `gorm:"default:'Direktur'" json:"ref"`
+	Amount         int64      `gorm:"not null" json:"amount"`
+	CurrentBalance int64      `gorm:"default:0" json:"currentBalance"`
+	FinalBalance   int64      `gorm:"default:0" json:"finalBalance"`
+	Inspector      User       `gorm:"foreignKey:InspectorID" json:"inspector"`
 }
 
 type InspectorLedgerParam struct {
 	InspectorID int64 `json:"inspectorId"`
 	PaginationParam
+}
+
+type CreateInspectorIncomeBody struct {
+	Amount int64  `json:"amount" binding:"required"`
+	Ref    string `json:"ref" binding:"required"`
 }

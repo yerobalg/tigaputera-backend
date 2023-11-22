@@ -91,6 +91,11 @@ func (r *rest) RegisterMiddlewareAndRoutes() {
 			r.AuthorizeRole(model.Admin),
 			r.GetListInspector,
 		)
+		v1.POST(
+			"user/inspector/income",
+			r.AuthorizeRole(model.Inspector),
+			r.CreateInspectorIncome,
+		)
 	}
 
 	// Project routes
@@ -102,7 +107,7 @@ func (r *rest) RegisterMiddlewareAndRoutes() {
 		v1.GET("project/:project_id/detail", r.GetProjectDetail)
 		v1.PATCH(
 			"project/:project_id/budget",
-			r.AuthorizeRole(model.Admin), 
+			r.AuthorizeRole(model.Admin),
 			r.UpdateProjectBudget,
 		)
 		v1.PATCH(

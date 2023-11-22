@@ -240,3 +240,61 @@ func (r *rest) GetListInspector(c *gin.Context) {
 
 	r.SuccessResponse(c, "Berhasil mendapatkan list pengawas", users, &userParam.PaginationParam)
 }
+
+// @Summary Create Inspector Income
+// @Description Create inspector income
+// @Tags Inspector Income
+// @Produce json
+// @Security BearerAuth
+// @Param createInspectorIncomeBody body model.CreateInspectorIncomeBody true "body"
+// @Success 200 {object} model.HTTPResponse{}
+// @Failure 400 {object} model.HTTPResponse{}
+// @Failure 401 {object} model.HTTPResponse{}
+// @Failure 500 {object} model.HTTPResponse{}
+// @Router /v1/user/inspector/income [POST]
+func (r *rest) CreateInspectorIncome(c *gin.Context) {
+	ctx := c.Request.Context()
+	var createInspectorIncomeBody model.CreateInspectorIncomeBody
+
+	if err := r.BindBody(c, &createInspectorIncomeBody); err != nil {
+		r.ErrorResponse(c, err)
+		return
+	}
+
+	if err := r.validator.ValidateStruct(createInspectorIncomeBody); err != nil {
+		r.ErrorResponse(c, errors.BadRequest(err.Error()))
+		return
+	}
+
+	var latestLedger model.InspectorLedger
+	user := auth.GetUser(ctx)
+	var previousBalance int64
+	err := r.db.WithContext(ctx).
+		Order("created_at desc").
+		First(&latestLedger, user.ID).Error
+
+	if err != nil && r.isNoRecordFound(err) {
+		previousBalance = 0
+	} else if err != nil {
+		r.ErrorResponse(c, errors.InternalServerError(err.Error()))
+		return
+	} else {
+		previousBalance = latestLedger.FinalBalance
+	}
+
+	newLedger := model.InspectorLedger{
+		InspectorID:    user.ID,
+		LedgerType:     model.Debit,
+		Ref:            createInspectorIncomeBody.Ref,
+		Amount:         createInspectorIncomeBody.Amount,
+		CurrentBalance: previousBalance,
+		FinalBalance:   previousBalance + createInspectorIncomeBody.Amount,
+	}
+
+	if err := r.db.WithContext(ctx).Create(&newLedger).Error; err != nil {
+		r.ErrorResponse(c, errors.InternalServerError(err.Error()))
+		return
+	}
+
+	r.SuccessResponse(c, "Berhasil membuat pemasukan pengawas", nil, nil)
+}

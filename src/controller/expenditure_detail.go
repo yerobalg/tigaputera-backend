@@ -66,25 +66,26 @@ func (r *rest) CreateProjectExpenditureDetail(c *gin.Context) {
 		Take(&inspectorLedger).Error
 
 	if err != nil && r.isNoRecordFound(err) {
-		r.ErrorResponse(c, errors.BadRequest("Akun tidak ditemukan"))
+		r.ErrorResponse(c, errors.BadRequest("Saldo tidak mencukupi"))
 		return
 	} else if err != nil {
 		r.ErrorResponse(c, errors.InternalServerError(err.Error()))
 	}
 
-	totalPrice := body.Price * body.Amount
+	totalPrice := body.Price * body.Amount * -1
 	var newLedger model.InspectorLedger
 
-	if inspectorLedger.Balance < totalPrice {
+	if inspectorLedger.FinalBalance < totalPrice {
 		r.ErrorResponse(c, errors.BadRequest("Saldo tidak mencukupi"))
 		return
 	} else {
 		newLedger = model.InspectorLedger{
-			InspectorID: user.ID,
-			LedgerType:  model.Credit,
-			Ref:         fmt.Sprintf("%s Proyek %s", body.Name, projectExpenditure.Project.Name),
-			Amount:      totalPrice,
-			Balance:     inspectorLedger.Balance - totalPrice,
+			InspectorID:    user.ID,
+			LedgerType:     model.Credit,
+			Ref:            fmt.Sprintf("%s Proyek %s", body.Name, projectExpenditure.Project.Name),
+			Amount:         totalPrice,
+			CurrentBalance: inspectorLedger.FinalBalance,
+			FinalBalance:   inspectorLedger.FinalBalance + totalPrice,
 		}
 	}
 
