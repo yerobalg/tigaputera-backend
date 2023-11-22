@@ -1,13 +1,17 @@
 package model
 
+import (
+	"gorm.io/gorm"
+)
+
 type ExpenditureDetail struct {
-	ID        int64  `gorm:"primaryKey" json:"id"`
-	CreatedAt int64  `json:"createdAt"`
-	UpdatedAt int64  `json:"updatedAt"`
-	DeletedAt int64  `gorm:"index" json:"-"`
-	CreatedBy *int64 `json:"createdBy"`
-	UpdatedBy *int64 `json:"updatedBy"`
-	DeletedBy *int64 `json:"deletedBy"`
+	ID        int64          `gorm:"primaryKey" json:"id"`
+	CreatedAt int64          `json:"createdAt"`
+	UpdatedAt int64          `json:"updatedAt"`
+	DeletedAt gorm.DeletedAt `gorm:"index" json:"-"`
+	CreatedBy *int64         `json:"createdBy"`
+	UpdatedBy *int64         `json:"updatedBy"`
+	DeletedBy *int64         `json:"deletedBy"`
 
 	Name          string             `gorm:"not null;type:varchar(255)" json:"name"`
 	Price         int64              `json:"price"`

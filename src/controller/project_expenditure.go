@@ -14,7 +14,7 @@ import (
 // @Security BearerAuth
 // @Param project_id path int true "project_id"
 // @Param createProjectExpenditureBody body model.CreateProjectExpenditureBody true "body"
-// @Success 200 {object} model.HTTPResponse{}
+// @Success 201 {object} model.HTTPResponse{}
 // @Failure 400 {object} model.HTTPResponse{}
 // @Failure 401 {object} model.HTTPResponse{}
 // @Failure 500 {object} model.HTTPResponse{}
@@ -73,5 +73,5 @@ func (r *rest) CreateProjectExpenditure(c *gin.Context) {
 		return
 	}
 
-	r.SuccessResponse(c, "Berhasil membuat pengeluaran proyek", nil, nil)
+	r.CreatedResponse(c, "Berhasil membuat pengeluaran proyek", nil)
 }

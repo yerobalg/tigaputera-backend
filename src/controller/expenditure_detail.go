@@ -16,7 +16,7 @@ import (
 // @Param project_id path  int true "project_id"
 // @Param expenditure_id path  int true "expenditure_id"
 // @Param createExpenditureDetailBody body model.CreateExpenditureDetailBody true "body"
-// @Success 200 {object} model.HTTPResponse{}
+// @Success 201 {object} model.HTTPResponse{}
 // @Failure 400 {object} model.HTTPResponse{}
 // @Failure 401 {object} model.HTTPResponse{}
 // @Failure 500 {object} model.HTTPResponse{}
@@ -72,7 +72,7 @@ func (r *rest) CreateProjectExpenditureDetail(c *gin.Context) {
 		r.ErrorResponse(c, errors.InternalServerError(err.Error()))
 	}
 
-	totalPrice := body.Price * body.Amount * -1
+	totalPrice := body.Price * body.Amount 
 	var newLedger model.InspectorLedger
 
 	if inspectorLedger.FinalBalance < totalPrice {
@@ -83,7 +83,7 @@ func (r *rest) CreateProjectExpenditureDetail(c *gin.Context) {
 			InspectorID:    user.ID,
 			LedgerType:     model.Credit,
 			Ref:            fmt.Sprintf("%s Proyek %s", body.Name, projectExpenditure.Project.Name),
-			Amount:         totalPrice,
+			Amount:         totalPrice * -1,
 			CurrentBalance: inspectorLedger.FinalBalance,
 			FinalBalance:   inspectorLedger.FinalBalance + totalPrice,
 		}
@@ -128,7 +128,7 @@ func (r *rest) CreateProjectExpenditureDetail(c *gin.Context) {
 		return
 	}
 
-	r.SuccessResponse(c, "Berhasil membuat detail pengeluaran proyek", nil, nil)
+	r.CreatedResponse(c, "Berhasil membuat detail pengeluaran proyek", nil)
 }
 
 // @Summary Get List Project Expenditure Detail

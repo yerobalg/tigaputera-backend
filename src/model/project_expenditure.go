@@ -1,13 +1,15 @@
 package model
 
+import "gorm.io/gorm"
+
 type ProjectExpenditure struct {
-	ID        int64  `gorm:"primaryKey" json:"id"`
-	CreatedAt int64  `json:"createdAt"`
-	UpdatedAt int64  `json:"updatedAt"`
-	DeletedAt int64  `gorm:"index" json:"-"`
-	CreatedBy *int64 `json:"createdBy"`
-	UpdatedBy *int64 `json:"updatedBy"`
-	DeletedBy *int64 `json:"deletedBy"`
+	ID        int64          `gorm:"primaryKey" json:"id"`
+	CreatedAt int64          `json:"createdAt"`
+	UpdatedAt int64          `json:"updatedAt"`
+	DeletedAt gorm.DeletedAt `gorm:"index" json:"-"`
+	CreatedBy *int64         `json:"createdBy"`
+	UpdatedBy *int64         `json:"updatedBy"`
+	DeletedBy *int64         `json:"deletedBy"`
 
 	ProjectID   int64   `json:"projectId" gorm:"index:idx_project_expenditure,unique"`
 	Sequence    int64   `gorm:"not null;index:idx_project_expenditure,unique" json:"sequence"`

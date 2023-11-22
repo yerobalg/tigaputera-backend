@@ -247,7 +247,7 @@ func (r *rest) GetListInspector(c *gin.Context) {
 // @Produce json
 // @Security BearerAuth
 // @Param createInspectorIncomeBody body model.CreateInspectorIncomeBody true "body"
-// @Success 200 {object} model.HTTPResponse{}
+// @Success 201 {object} model.HTTPResponse{}
 // @Failure 400 {object} model.HTTPResponse{}
 // @Failure 401 {object} model.HTTPResponse{}
 // @Failure 500 {object} model.HTTPResponse{}
@@ -296,5 +296,5 @@ func (r *rest) CreateInspectorIncome(c *gin.Context) {
 		return
 	}
 
-	r.SuccessResponse(c, "Berhasil membuat pemasukan pengawas", nil, nil)
+	r.CreatedResponse(c, "Berhasil membuat pemasukan pengawas", nil)
 }
