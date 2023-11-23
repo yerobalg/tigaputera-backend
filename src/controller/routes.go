@@ -96,6 +96,7 @@ func (r *rest) RegisterMiddlewareAndRoutes() {
 			r.AuthorizeRole(model.Inspector),
 			r.CreateInspectorIncome,
 		)
+		v1.GET("user/stats", r.GetUserStats)
 	}
 
 	// Project routes

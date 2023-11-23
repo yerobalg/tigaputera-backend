@@ -1,6 +1,6 @@
 package model
 
-type MqtInspectorStats struct {
+type MqtUserStats struct {
 	StartTime                int64  `gorm:"column:start_time"`
 	EndTime                  int64  `gorm:"column:end_time"`
 	IntervalMonth            int64  `gorm:"column:interval_month"`
@@ -20,11 +20,27 @@ type MqtInspectorStats struct {
 	TotalBuildingIncome      *int64 `gorm:"column:total_building_income"`
 }
 
-type ProjectStatsDetailResponse struct {
-	LastUpdated       int64  `json:"lastUpdated"`
-	InspectorID       int64  `json:"inspectorID"`
-	InspectorUsername string `json:"inspectorUsername"`
-	IntervalMonth     int64  `json:"intervalMonth"`
+type UserStatsParam struct {
+	StartTime   int64 `form:"startTime"`
+	UserID      int64 
+}
+
+type UserStatsDetailResponse struct {
+	LastUpdated       int64                 `json:"lastUpdated"`
+	InspectorID       int64                 `json:"inspectorID"`
+	InspectorUsername string                `json:"inspectorUsername"`
+	IntervalMonth     int64                 `json:"intervalMonth"`
+	Project           TotalProjectStats     `json:"project"`
+	Expenditure       TotalExpenditureStats `json:"expenditure"`
+	Income            TotalIncomeStats      `json:"income"`
+	Margin            MarginStats           `json:"margin"`
+}
+
+type UserStatsResponse struct {
+	TotalProject     int64  `json:"totalProject"`
+	TotalExpenditure string `json:"totalExpenditure"`
+	TotalIncome      string `json:"totalIncome"`
+	Margin           string `json:"margin"`
 }
 
 type TotalProjectStats struct {
@@ -69,4 +85,25 @@ type StatsString struct {
 	Name       string  `json:"name"`
 	Total      string  `json:"total"`
 	Percentage float64 `json:"percentage"`
+}
+
+func GetTotalProject(userStats MqtUserStats) int64 {
+	return *userStats.TotalDrainageProject + 
+		*userStats.TotalAshpaltProject + 
+		*userStats.TotalConcreteProject + 
+		*userStats.TotalBuildingProject
+}
+
+func GetTotalExpenditure(userStats MqtUserStats) int64 {
+	return *userStats.TotalDrainageExpenditure + 
+		*userStats.TotalAshpaltExpenditure + 
+		*userStats.TotalConcreteExpenditure + 
+		*userStats.TotalBuildingExpenditure
+}
+
+func GetTotalIncome(userStats MqtUserStats) int64 {
+	return *userStats.TotalDrainageIncome + 
+		*userStats.TotalAshpaltIncome + 
+		*userStats.TotalConcreteIncome + 
+		*userStats.TotalBuildingIncome
 }

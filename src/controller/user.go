@@ -4,7 +4,9 @@ import (
 	"github.com/gin-gonic/gin"
 	"tigaputera-backend/sdk/auth"
 	errors "tigaputera-backend/sdk/error"
+	"tigaputera-backend/sdk/number"
 	"tigaputera-backend/src/model"
+	"time"
 )
 
 // @Summary Login
@@ -297,4 +299,71 @@ func (r *rest) CreateInspectorIncome(c *gin.Context) {
 	}
 
 	r.CreatedResponse(c, "Berhasil membuat pemasukan pengawas", nil)
+}
+
+// @Summary Get User Stats
+// @Description Get user statistics
+// @Tags User
+// @Produce json
+// @Security BearerAuth
+// @Success 200 {object} model.HTTPResponse{data=model.UserStatsResponse{}}
+// @Failure 401 {object} model.HTTPResponse{}
+// @Failure 500 {object} model.HTTPResponse{}
+// @Router /v1/user/stats [GET]
+func (r *rest) GetUserStats(c *gin.Context) {
+	ctx := c.Request.Context()
+	user := auth.GetUser(ctx)
+
+	var userStatsParam model.UserStatsParam
+	if user.Role == string(model.Inspector) {
+		userStatsParam.UserID = user.ID
+	} else {
+		userStatsParam.UserID = 0
+	}
+
+	lastYear := time.Now().UTC().AddDate(-1, 0, 0)
+	userStatsParam.StartTime = time.Date(
+		lastYear.Year(),
+		lastYear.Month(),
+		lastYear.Day(),
+		0,
+		0,
+		0,
+		0,
+		lastYear.UTC().Location(),
+	).Unix()
+
+	var totalProject int64
+	var totalExpenditure int64
+	var totalIncome int64
+	var totalMargin int64
+
+	var userStats model.MqtUserStats
+	err := r.db.WithContext(ctx).
+		Where(&userStatsParam).
+		First(&userStats).Error
+
+	if err != nil && r.isNoRecordFound(err) {
+		totalProject = 0
+		totalExpenditure = 0
+		totalIncome = 0
+		totalMargin = 0
+	} else if err != nil {
+		r.ErrorResponse(c, errors.InternalServerError(err.Error()))
+		return
+	} else {
+		totalProject = model.GetTotalProject(userStats)
+		totalExpenditure = model.GetTotalExpenditure(userStats)
+		totalIncome = model.GetTotalIncome(userStats)
+		totalMargin = totalIncome - totalExpenditure
+	}
+
+	userStatsResponse := model.UserStatsResponse{
+		TotalProject:     totalProject,
+		TotalExpenditure: number.ConvertToRupiah(totalExpenditure),
+		TotalIncome:      number.ConvertToRupiah(totalIncome),
+		Margin:           number.ConvertToRupiah(totalMargin),
+	}
+
+	r.SuccessResponse(c, "Berhasil mendapatkan statistik pengguna", userStatsResponse, nil)
 }
