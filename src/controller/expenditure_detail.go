@@ -85,7 +85,7 @@ func (r *rest) CreateProjectExpenditureDetail(c *gin.Context) {
 			Ref:            fmt.Sprintf("%s Proyek %s", body.Name, projectExpenditure.Project.Name),
 			Amount:         totalPrice * -1,
 			CurrentBalance: inspectorLedger.FinalBalance,
-			FinalBalance:   inspectorLedger.FinalBalance + totalPrice,
+			FinalBalance:   inspectorLedger.FinalBalance - totalPrice,
 		}
 	}
 

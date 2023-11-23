@@ -2,11 +2,12 @@ package controller
 
 import (
 	"database/sql"
-	"github.com/gin-gonic/gin"
 	"tigaputera-backend/sdk/auth"
 	errors "tigaputera-backend/sdk/error"
 	"tigaputera-backend/sdk/number"
 	"tigaputera-backend/src/model"
+
+	"github.com/gin-gonic/gin"
 )
 
 // @Summary Create Project
@@ -65,7 +66,8 @@ func (r *rest) CreateProject(c *gin.Context) {
 		return
 	}
 
-	initialProjectExpenditures := model.InitialProjectExpenditures
+	initialProjectExpenditures := make([]model.ProjectExpenditure, len(model.InitialProjectExpenditures))
+	copy(initialProjectExpenditures, model.InitialProjectExpenditures)
 	for i := range initialProjectExpenditures {
 		initialProjectExpenditures[i].ProjectID = project.ID
 	}
