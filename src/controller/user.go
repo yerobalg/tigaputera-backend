@@ -275,7 +275,7 @@ func (r *rest) CreateInspectorIncome(c *gin.Context) {
 		Order("created_at desc").
 		First(&latestLedger, user.ID).Error
 
-	if err != nil && r.isNoRecordFound(err) {
+	if r.isNoRecordFound(err) {
 		previousBalance = 0
 	} else if err != nil {
 		r.ErrorResponse(c, errors.InternalServerError(err.Error()))
@@ -321,16 +321,16 @@ func (r *rest) GetUserStats(c *gin.Context) {
 		userStatsParam.UserID = 0
 	}
 
-	lastYear := time.Now().UTC().AddDate(-1, 0, 0)
+	lastMonth := time.Now().UTC().AddDate(0, -1, 0)
 	userStatsParam.StartTime = time.Date(
-		lastYear.Year(),
-		lastYear.Month(),
-		lastYear.Day(),
+		lastMonth.Year(),
+		lastMonth.Month(),
+		lastMonth.Day(),
 		0,
 		0,
 		0,
 		0,
-		lastYear.UTC().Location(),
+		lastMonth.Location(),
 	).Unix()
 
 	var totalProject int64
@@ -343,7 +343,7 @@ func (r *rest) GetUserStats(c *gin.Context) {
 		Where(&userStatsParam).
 		First(&userStats).Error
 
-	if err != nil && r.isNoRecordFound(err) {
+	if r.isNoRecordFound(err) {
 		totalProject = 0
 		totalExpenditure = 0
 		totalIncome = 0

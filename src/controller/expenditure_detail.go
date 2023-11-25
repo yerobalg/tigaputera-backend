@@ -47,7 +47,7 @@ func (r *rest) CreateProjectExpenditureDetail(c *gin.Context) {
 	err := r.db.WithContext(ctx).
 		InnerJoins("Project", r.db.Where(&model.Project{InspectorID: user.ID})).
 		First(&projectExpenditure, param.ExpenditureID).Error
-	if err != nil && r.isNoRecordFound(err) {
+	if r.isNoRecordFound(err) {
 		r.ErrorResponse(c, errors.BadRequest("pengeluaran proyek tidak ditemukan"))
 		return
 	} else if err != nil {
@@ -65,7 +65,7 @@ func (r *rest) CreateProjectExpenditureDetail(c *gin.Context) {
 		Order("created_at desc").
 		Take(&inspectorLedger).Error
 
-	if err != nil && r.isNoRecordFound(err) {
+	if r.isNoRecordFound(err) {
 		r.ErrorResponse(c, errors.BadRequest("Saldo tidak mencukupi"))
 		return
 	} else if err != nil {
@@ -166,7 +166,7 @@ func (r *rest) GetProjectExpenditureDetailList(c *gin.Context) {
 		InnerJoins("Project.Inspector").
 		Rows()
 
-	if err != nil && r.isNoRecordFound(err) {
+	if r.isNoRecordFound(err) {
 		r.ErrorResponse(
 			c,
 			errors.BadRequest("pengeluaran proyek tidak ditemukan"),

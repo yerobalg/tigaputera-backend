@@ -52,7 +52,7 @@ func (r *rest) CreateProjectExpenditure(c *gin.Context) {
 		Order("sequence desc").
 		Take(&latestProjectExpenditure).Error
 
-	if err != nil && r.isNoRecordFound(err) {
+	if r.isNoRecordFound(err) {
 		r.ErrorResponse(c, errors.BadRequest("Proyek tidak ditemukan"))
 		return
 	} else if err != nil {

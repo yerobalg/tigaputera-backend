@@ -56,7 +56,7 @@ func (r *rest) CreateProject(c *gin.Context) {
 	tx := r.db.WithContext(ctx).Begin()
 
 	err := tx.Create(&project).Error
-	if err != nil && r.isUniqueKeyViolation(err) {
+	if r.isUniqueKeyViolation(err) {
 		tx.Rollback()
 		r.ErrorResponse(c, errors.BadRequest("Nama proyek sudah ada"))
 		return
