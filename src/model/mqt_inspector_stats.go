@@ -21,8 +21,9 @@ type MqtInspectorStats struct {
 }
 
 type InspectorStatsParam struct {
-	StartTime int64 `form:"startTime"`
-	UserID    int64
+	IntervalMonth int64 `form:"interval_month"`
+	UserID        int64 `form:"user_id"`
+	StartTime     int64
 }
 
 type InspectorStatsDetailResponse struct {
@@ -30,7 +31,7 @@ type InspectorStatsDetailResponse struct {
 	InspectorID       int64                 `json:"inspectorID"`
 	InspectorUsername string                `json:"inspectorUsername"`
 	IntervalMonth     int64                 `json:"intervalMonth"`
-	Project           TotalProjectStats     `json:"project"`
+	ProjectCount      TotalProjectStats     `json:"projectCount"`
 	Expenditure       TotalExpenditureStats `json:"expenditure"`
 	Income            string                `json:"income"`
 	Margin            string                `json:"margin"`
@@ -77,18 +78,4 @@ type StatsString struct {
 	Name       string  `json:"name"`
 	Total      string  `json:"total"`
 	Percentage float64 `json:"percentage"`
-}
-
-func GetTotalProject(inspectorStats MqtInspectorStats) int64 {
-	return *inspectorStats.TotalDrainageProject +
-		*inspectorStats.TotalAshpaltProject +
-		*inspectorStats.TotalConcreteProject +
-		*inspectorStats.TotalBuildingProject
-}
-
-func GetTotalExpenditure(inspectorStats MqtInspectorStats) int64 {
-	return *inspectorStats.TotalDrainageExpenditure +
-		*inspectorStats.TotalAshpaltExpenditure +
-		*inspectorStats.TotalConcreteExpenditure +
-		*inspectorStats.TotalBuildingExpenditure
 }

@@ -98,6 +98,7 @@ func (r *rest) RegisterMiddlewareAndRoutes() {
 			r.CreateInspectorIncome,
 		)
 		v1.GET("user/stats", r.GetUserStats)
+		v1.GET("user/stats/detail", r.GetUserStatsDetail)
 	}
 
 	// Project routes
