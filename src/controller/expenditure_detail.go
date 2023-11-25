@@ -73,27 +73,11 @@ func (r *rest) CreateProjectExpenditureDetail(c *gin.Context) {
 	}
 
 	totalPrice := body.Price * body.Amount 
-	var newLedger model.InspectorLedger
-
-	if inspectorLedger.FinalBalance < totalPrice {
-		r.ErrorResponse(c, errors.BadRequest("Saldo tidak mencukupi"))
-		return
-	} else {
-		newLedger = model.InspectorLedger{
-			InspectorID:    user.ID,
-			LedgerType:     model.Credit,
-			Ref:            fmt.Sprintf("%s Proyek %s", body.Name, projectExpenditure.Project.Name),
-			Amount:         totalPrice * -1,
-			CurrentBalance: inspectorLedger.FinalBalance,
-			FinalBalance:   inspectorLedger.FinalBalance - totalPrice,
-		}
-	}
-
 	expenditureDetail := model.ExpenditureDetail{
 		Name:          body.Name,
 		Price:         body.Price,
 		Amount:        body.Amount,
-		TotalPrice:    body.Price * body.Amount,
+		TotalPrice:    totalPrice,
 		ReceiptURL:    "", // TODO: Upload receipt
 		ExpenditureID: projectExpenditure.ID,
 		ProjectID:     projectExpenditure.ProjectID,
@@ -109,6 +93,24 @@ func (r *rest) CreateProjectExpenditureDetail(c *gin.Context) {
 		tx.Rollback()
 		r.ErrorResponse(c, errors.InternalServerError(err.Error()))
 		return
+	}
+
+	var newLedger model.InspectorLedger
+
+	if inspectorLedger.FinalBalance < totalPrice {
+		tx.Rollback()
+		r.ErrorResponse(c, errors.BadRequest("Saldo tidak mencukupi"))
+		return
+	} else {
+		newLedger = model.InspectorLedger{
+			InspectorID:    user.ID,
+			LedgerType:     model.Credit,
+			Ref:            fmt.Sprintf("%s Proyek %s", body.Name, projectExpenditure.Project.Name),
+			RefID:          &expenditureDetail.ID,
+			Amount:         totalPrice * -1,
+			CurrentBalance: inspectorLedger.FinalBalance,
+			FinalBalance:   inspectorLedger.FinalBalance - totalPrice,
+		}
 	}
 
 	if err := tx.Create(&newLedger).Error; err != nil {

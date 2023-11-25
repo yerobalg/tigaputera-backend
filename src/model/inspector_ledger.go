@@ -22,6 +22,7 @@ type InspectorLedger struct {
 
 	InspectorID    int64      `json:"inspectorId"`
 	LedgerType     LedgerType `gorm:"not null;type:varchar(255)" json:"ledgerType"`
+	RefID          *int64     `gorm:"default:0" json:"refId"`
 	Ref            string     `gorm:"default:'Direktur'" json:"ref"`
 	Amount         int64      `gorm:"not null" json:"amount"`
 	CurrentBalance int64      `gorm:"default:0" json:"currentBalance"`

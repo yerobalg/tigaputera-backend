@@ -74,6 +74,7 @@ func (r *rest) RegisterMiddlewareAndRoutes() {
 	r.http.POST("/v1/auth/login", r.Login)
 
 	// Protected Routes
+	r.http.PUT("/v1/user/statistics/refresh", r.RefreshStatistics)
 	v1 := r.http.Group("v1", r.Authorization())
 
 	// User routes

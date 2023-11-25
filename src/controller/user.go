@@ -306,7 +306,7 @@ func (r *rest) CreateInspectorIncome(c *gin.Context) {
 // @Tags User
 // @Produce json
 // @Security BearerAuth
-// @Success 200 {object} model.HTTPResponse{data=model.UserStatsResponse{}}
+// @Success 200 {object} model.HTTPResponse{data=model.InspectorStatsResponse{}}
 // @Failure 401 {object} model.HTTPResponse{}
 // @Failure 500 {object} model.HTTPResponse{}
 // @Router /v1/user/stats [GET]
@@ -314,7 +314,7 @@ func (r *rest) GetUserStats(c *gin.Context) {
 	ctx := c.Request.Context()
 	user := auth.GetUser(ctx)
 
-	var userStatsParam model.UserStatsParam
+	var userStatsParam model.InspectorStatsParam
 	if user.Role == string(model.Inspector) {
 		userStatsParam.UserID = user.ID
 	} else {
@@ -338,7 +338,7 @@ func (r *rest) GetUserStats(c *gin.Context) {
 	var totalIncome int64
 	var totalMargin int64
 
-	var userStats model.MqtUserStats
+	var userStats model.MqtInspectorStats
 	err := r.db.WithContext(ctx).
 		Where(&userStatsParam).
 		First(&userStats).Error
@@ -354,11 +354,11 @@ func (r *rest) GetUserStats(c *gin.Context) {
 	} else {
 		totalProject = model.GetTotalProject(userStats)
 		totalExpenditure = model.GetTotalExpenditure(userStats)
-		totalIncome = model.GetTotalIncome(userStats)
+		totalIncome = *userStats.TotalIncome
 		totalMargin = totalIncome - totalExpenditure
 	}
 
-	userStatsResponse := model.UserStatsResponse{
+	userStatsResponse := model.InspectorStatsResponse{
 		TotalProject:     totalProject,
 		TotalExpenditure: number.ConvertToRupiah(totalExpenditure),
 		TotalIncome:      number.ConvertToRupiah(totalIncome),

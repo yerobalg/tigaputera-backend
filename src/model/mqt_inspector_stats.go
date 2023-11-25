@@ -1,6 +1,6 @@
 package model
 
-type MqtUserStats struct {
+type MqtInspectorStats struct {
 	StartTime                int64  `gorm:"column:start_time"`
 	EndTime                  int64  `gorm:"column:end_time"`
 	IntervalMonth            int64  `gorm:"column:interval_month"`
@@ -10,33 +10,33 @@ type MqtUserStats struct {
 	TotalAshpaltProject      *int64 `gorm:"column:total_ashpalt_project"`
 	TotalConcreteProject     *int64 `gorm:"column:total_concrete_project"`
 	TotalBuildingProject     *int64 `gorm:"column:total_building_project"`
+	TotalProject             *int64 `gorm:"column:total_project"`
 	TotalDrainageExpenditure *int64 `gorm:"column:total_drainage_expenditure"`
 	TotalAshpaltExpenditure  *int64 `gorm:"column:total_ashpalt_expenditure"`
 	TotalConcreteExpenditure *int64 `gorm:"column:total_concrete_expenditure"`
 	TotalBuildingExpenditure *int64 `gorm:"column:total_building_expenditure"`
-	TotalDrainageIncome      *int64 `gorm:"column:total_drainage_income"`
-	TotalAshpaltIncome       *int64 `gorm:"column:total_ashpalt_income"`
-	TotalConcreteIncome      *int64 `gorm:"column:total_concrete_income"`
-	TotalBuildingIncome      *int64 `gorm:"column:total_building_income"`
+	TotalExpenditure         *int64 `gorm:"column:total_expenditure"`
+	TotalIncome              *int64 `gorm:"column:total_income"`
+	Margin                   *int64 `gorm:"column:margin"`
 }
 
-type UserStatsParam struct {
-	StartTime   int64 `form:"startTime"`
-	UserID      int64 
+type InspectorStatsParam struct {
+	StartTime int64 `form:"startTime"`
+	UserID    int64
 }
 
-type UserStatsDetailResponse struct {
+type InspectorStatsDetailResponse struct {
 	LastUpdated       int64                 `json:"lastUpdated"`
 	InspectorID       int64                 `json:"inspectorID"`
 	InspectorUsername string                `json:"inspectorUsername"`
 	IntervalMonth     int64                 `json:"intervalMonth"`
 	Project           TotalProjectStats     `json:"project"`
 	Expenditure       TotalExpenditureStats `json:"expenditure"`
-	Income            TotalIncomeStats      `json:"income"`
-	Margin            MarginStats           `json:"margin"`
+	Income            string                `json:"income"`
+	Margin            string                `json:"margin"`
 }
 
-type UserStatsResponse struct {
+type InspectorStatsResponse struct {
 	TotalProject     int64  `json:"totalProject"`
 	TotalExpenditure string `json:"totalExpenditure"`
 	TotalIncome      string `json:"totalIncome"`
@@ -59,20 +59,12 @@ type TotalExpenditureStats struct {
 	Building         StatsString `json:"building"`
 }
 
-type TotalIncomeStats struct {
-	TotalIncome string      `json:"totalIncome"`
-	Drainage    StatsString `json:"drainage"`
-	Ashpalt     StatsString `json:"ashpalt"`
-	Concrete    StatsString `json:"concrete"`
-	Building    StatsString `json:"building"`
-}
-
-type MarginStats struct {
-	TotalMargin string      `json:"totalMargin"`
-	Drainage    StatsString `json:"drainage"`
-	Ashpalt     StatsString `json:"ashpalt"`
-	Concrete    StatsString `json:"concrete"`
-	Building    StatsString `json:"building"`
+type ProjectData struct {
+	Drainage int64 `json:"drainage"`
+	Ashpalt  int64 `json:"ashpalt"`
+	Concrete int64 `json:"concrete"`
+	Building int64 `json:"building"`
+	Total    int64 `json:"total"`
 }
 
 type Stats struct {
@@ -87,23 +79,16 @@ type StatsString struct {
 	Percentage float64 `json:"percentage"`
 }
 
-func GetTotalProject(userStats MqtUserStats) int64 {
-	return *userStats.TotalDrainageProject + 
-		*userStats.TotalAshpaltProject + 
-		*userStats.TotalConcreteProject + 
-		*userStats.TotalBuildingProject
+func GetTotalProject(inspectorStats MqtInspectorStats) int64 {
+	return *inspectorStats.TotalDrainageProject +
+		*inspectorStats.TotalAshpaltProject +
+		*inspectorStats.TotalConcreteProject +
+		*inspectorStats.TotalBuildingProject
 }
 
-func GetTotalExpenditure(userStats MqtUserStats) int64 {
-	return *userStats.TotalDrainageExpenditure + 
-		*userStats.TotalAshpaltExpenditure + 
-		*userStats.TotalConcreteExpenditure + 
-		*userStats.TotalBuildingExpenditure
-}
-
-func GetTotalIncome(userStats MqtUserStats) int64 {
-	return *userStats.TotalDrainageIncome + 
-		*userStats.TotalAshpaltIncome + 
-		*userStats.TotalConcreteIncome + 
-		*userStats.TotalBuildingIncome
+func GetTotalExpenditure(inspectorStats MqtInspectorStats) int64 {
+	return *inspectorStats.TotalDrainageExpenditure +
+		*inspectorStats.TotalAshpaltExpenditure +
+		*inspectorStats.TotalConcreteExpenditure +
+		*inspectorStats.TotalBuildingExpenditure
 }
