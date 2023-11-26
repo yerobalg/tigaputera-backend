@@ -92,11 +92,17 @@ func (r *rest) RegisterMiddlewareAndRoutes() {
 			r.AuthorizeRole(model.Admin),
 			r.GetListInspector,
 		)
+		v1.DELETE(
+			"user/inpsector/:user_id",
+			r.AuthorizeRole(model.Admin),
+			r.DeactiveInspector,
+		)
 		v1.POST(
 			"user/inspector/income",
 			r.AuthorizeRole(model.Inspector),
 			r.CreateInspectorIncome,
 		)
+
 		v1.GET("user/stats", r.GetUserStats)
 		v1.GET("user/stats/detail", r.GetUserStatsDetail)
 	}

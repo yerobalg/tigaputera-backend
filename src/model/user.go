@@ -28,6 +28,7 @@ type User struct {
 }
 
 type UserParam struct {
+	ID       int64  `param:"id" uri:"user_id"`
 	Username string `param:"username"`
 	Role     string `param:"role"`
 	PaginationParam

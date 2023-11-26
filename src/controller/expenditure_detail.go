@@ -72,7 +72,7 @@ func (r *rest) CreateProjectExpenditureDetail(c *gin.Context) {
 		r.ErrorResponse(c, errors.InternalServerError(err.Error()))
 	}
 
-	totalPrice := body.Price * body.Amount 
+	totalPrice := body.Price * body.Amount
 	expenditureDetail := model.ExpenditureDetail{
 		Name:          body.Name,
 		Price:         body.Price,

@@ -369,6 +369,39 @@ func (r *rest) GetUserStats(c *gin.Context) {
 	r.SuccessResponse(c, "Berhasil mendapatkan statistik pengguna", userStatsResponse, nil)
 }
 
+// @Summary Deactive Inspector
+// @Description Deactive an inspector
+// @Tags User
+// @Produce json
+// @Security BearerAuth
+// @Param inspectorID path int true "inspectorID"
+// @Success 200 {object} model.HTTPResponse{}
+// @Failure 401 {object} model.HTTPResponse{}
+// @Failure 500 {object} model.HTTPResponse{}
+// @Router /v1/user/inspector/{user_id} [DELETE]
+func (r *rest) DeactiveInspector(c *gin.Context) {
+	var inspectorParam model.UserParam
+	if err := r.BindParam(c, &inspectorParam); err != nil {
+		r.ErrorResponse(c, err)
+		return
+	}
+
+	ctx := c.Request.Context()
+	err := r.db.WithContext(ctx).
+		Where(&inspectorParam).
+		Delete(&model.User{}).Error
+
+	if r.isNoRecordFound(err) {
+		r.ErrorResponse(c, errors.BadRequest("Pengawas tidak ditemukan"))
+		return
+	} else if err != nil {
+		r.ErrorResponse(c, errors.InternalServerError(err.Error()))
+		return
+	}
+
+	r.SuccessResponse(c, "Berhasil menonaktifkan pengawas", nil, nil)
+}
+
 // @Summary Get Inspector Stats Detail
 // @Description Get user statistics detail
 // @Tags User

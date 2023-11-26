@@ -31,7 +31,8 @@ type InspectorLedger struct {
 }
 
 type InspectorLedgerParam struct {
-	InspectorID int64 `json:"inspectorId"`
+	InspectorID int64
+	RefID       *int64
 	PaginationParam
 }
 

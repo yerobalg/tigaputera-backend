@@ -33,9 +33,10 @@ type CreateExpenditureDetailBody struct {
 }
 
 type ExpenditureDetailParam struct {
-	ProjectID           int64 `uri:"project_id" param:"project_id"`
-	ExpenditureID       int64 `uri:"expenditure_id" param:"expenditure_id"`
-	ExpenditureDetailID int64 `uri:"expenditure_detail_id" param:"expenditure_detail_id"`
+	ID            int64 `uri:"expenditure_detail_id" param:"expenditure_detail_id"`
+	ProjectID     int64 `uri:"project_id" param:"project_id"`
+	ExpenditureID int64 `uri:"expenditure_id" param:"expenditure_id"`
+	InspectorID   int64 `param:"inspector_id"`
 	PaginationParam
 }
 
