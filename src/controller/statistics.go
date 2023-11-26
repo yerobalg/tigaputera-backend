@@ -1,13 +1,14 @@
 package controller
 
 import (
+	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 	"os"
+	"tigaputera-backend/sdk/auth"
 	errors "tigaputera-backend/sdk/error"
+	"tigaputera-backend/sdk/number"
 	"tigaputera-backend/src/model"
 	"time"
-
-	"github.com/gin-gonic/gin"
 )
 
 // @Summary Refresh Statistics
@@ -103,7 +104,7 @@ func (r *rest) RefreshStatistics(c *gin.Context) {
 			StartTime:                starDateUnix,
 			EndTime:                  endDateUnix,
 			IntervalMonth:            int64(intervalMonth),
-			InspectorID:              new(int64),  // 0
+			InspectorID:              new(int64), // 0
 			InspectorUsername:        "All",
 			TotalDrainageProject:     &projectCountData.Drainage,
 			TotalAshpaltProject:      &projectCountData.Ashpalt,
@@ -342,4 +343,216 @@ func (r *rest) sumTotalIncome(
 	}
 
 	return total, nil
+}
+
+// @Summary Get User Stats
+// @Description Get user statistics
+// @Tags User
+// @Produce json
+// @Security BearerAuth
+// @Success 200 {object} model.HTTPResponse{data=model.InspectorStatsResponse{}}
+// @Failure 401 {object} model.HTTPResponse{}
+// @Failure 500 {object} model.HTTPResponse{}
+// @Router /v1/user/statistics [GET]
+func (r *rest) GetUserStats(c *gin.Context) {
+	ctx := c.Request.Context()
+	user := auth.GetUser(ctx)
+
+	var userStatsParam model.InspectorStatsParam
+	if user.Role == string(model.Inspector) {
+		userStatsParam.UserID = user.ID
+	} else {
+		userStatsParam.UserID = 0
+	}
+
+	lastMonth := time.Now().UTC().AddDate(0, -1, 0)
+	userStatsParam.StartTime = time.Date(
+		lastMonth.Year(),
+		lastMonth.Month(),
+		lastMonth.Day(),
+		0,
+		0,
+		0,
+		0,
+		lastMonth.Location(),
+	).Unix()
+
+	var totalProject int64
+	var totalExpenditure int64
+	var totalIncome int64
+	var totalMargin int64
+
+	var userStats model.MqtInspectorStats
+	err := r.db.WithContext(ctx).
+		Where(&userStatsParam).
+		First(&userStats).Error
+
+	if r.isNoRecordFound(err) {
+		totalProject = 0
+		totalExpenditure = 0
+		totalIncome = 0
+		totalMargin = 0
+	} else if err != nil {
+		r.ErrorResponse(c, errors.InternalServerError(err.Error()))
+		return
+	} else {
+		totalProject = *userStats.TotalProject
+		totalExpenditure = *userStats.TotalExpenditure
+		totalIncome = *userStats.TotalIncome
+		totalMargin = *userStats.Margin
+	}
+
+	userStatsResponse := model.InspectorStatsResponse{
+		TotalProject:     totalProject,
+		TotalExpenditure: number.ConvertToRupiah(totalExpenditure),
+		TotalIncome:      number.ConvertToRupiah(totalIncome),
+		Margin:           number.ConvertToRupiah(totalMargin),
+	}
+
+	r.SuccessResponse(c, "Berhasil mendapatkan statistik pengguna", userStatsResponse, nil)
+}
+
+// @Summary Get User Stats Detail
+// @Description Get user statistics detail
+// @Tags User
+// @Produce json
+// @Security BearerAuth
+// @Param interval_month query int false "interval_month"
+// @Param user_id query integer false "user_id"
+// @Success 200 {object} model.HTTPResponse{data=model.InspectorStatsDetailResponse}
+// @Failure 401 {object} model.HTTPResponse{}
+// @Failure 500 {object} model.HTTPResponse{}
+// @Router /v1/user/statisics/detail [GET]
+func (r *rest) GetUserStatsDetail(c *gin.Context) {
+	ctx := c.Request.Context()
+
+	var userStatsParam model.InspectorStatsParam
+	if err := r.BindParam(c, &userStatsParam); err != nil {
+		r.ErrorResponse(c, err)
+		return
+	}
+
+	user := auth.GetUser(ctx)
+	if user.Role == string(model.Inspector) {
+		userStatsParam.UserID = user.ID
+	}
+
+	intervalMonth := int(userStatsParam.IntervalMonth)
+	if intervalMonth == 0 {
+		intervalMonth = 1
+	}
+
+	beginMonth := time.Now().UTC().AddDate(0, -intervalMonth, 0)
+	userStatsParam.StartTime = time.Date(
+		beginMonth.Year(),
+		beginMonth.Month(),
+		beginMonth.Day(),
+		0,
+		0,
+		0,
+		0,
+		beginMonth.Location(),
+	).Unix()
+
+	var userStats model.MqtInspectorStats
+	err := r.db.WithContext(ctx).
+		Where(
+			"inspector_id = ? AND start_time = ?",
+			userStatsParam.UserID,
+			userStatsParam.StartTime,
+		).
+		Take(&userStats).Error
+
+	if r.isNoRecordFound(err) {
+		r.ErrorResponse(c, errors.BadRequest("Statistik pengguna tidak ditemukan"))
+		return
+	} else if err != nil {
+		r.ErrorResponse(c, errors.InternalServerError(err.Error()))
+		return
+	}
+
+	inspectorStatsDetailResponse := model.InspectorStatsDetailResponse{
+		LastUpdated:       userStats.EndTime,
+		InspectorID:       *userStats.InspectorID,
+		InspectorUsername: userStats.InspectorUsername,
+		IntervalMonth:     userStats.IntervalMonth,
+		ProjectCount: model.TotalProjectStats{
+			TotalProject: *userStats.TotalProject,
+			Drainage: model.Stats{
+				Name:  "Drainase",
+				Total: *userStats.TotalDrainageProject,
+				Percentage: number.GetPercentage(
+					*userStats.TotalDrainageProject,
+					*userStats.TotalProject,
+				),
+			},
+			Ashpalt: model.Stats{
+				Name:  "Hotmix",
+				Total: *userStats.TotalAshpaltProject,
+				Percentage: number.GetPercentage(
+					*userStats.TotalAshpaltProject,
+					*userStats.TotalProject,
+				),
+			},
+			Concrete: model.Stats{
+				Name:  "Beton",
+				Total: *userStats.TotalConcreteProject,
+				Percentage: number.GetPercentage(
+					*userStats.TotalConcreteProject,
+					*userStats.TotalProject,
+				),
+			},
+			Building: model.Stats{
+				Name:  "Bangunan",
+				Total: *userStats.TotalBuildingProject,
+				Percentage: number.GetPercentage(
+					*userStats.TotalBuildingProject,
+					*userStats.TotalProject,
+				),
+			},
+		},
+		Expenditure: model.TotalExpenditureStats{
+			TotalExpenditure: number.ConvertToRupiah(*userStats.TotalExpenditure),
+			Drainage: model.StatsString{
+				Name:  "Drainase",
+				Total: number.ConvertToRupiah(*userStats.TotalDrainageExpenditure),
+				Percentage: number.GetPercentage(
+					*userStats.TotalDrainageExpenditure,
+					*userStats.TotalExpenditure,
+				),
+			},
+			Ashpalt: model.StatsString{
+				Name:  "Hotmix",
+				Total: number.ConvertToRupiah(*userStats.TotalAshpaltExpenditure),
+				Percentage: number.GetPercentage(
+					*userStats.TotalAshpaltExpenditure,
+					*userStats.TotalExpenditure,
+				),
+			},
+			Concrete: model.StatsString{
+				Name:  "Beton",
+				Total: number.ConvertToRupiah(*userStats.TotalConcreteExpenditure),
+				Percentage: number.GetPercentage(
+					*userStats.TotalConcreteExpenditure,
+					*userStats.TotalExpenditure,
+				),
+			},
+			Building: model.StatsString{
+				Name:  "Bangunan",
+				Total: number.ConvertToRupiah(*userStats.TotalBuildingExpenditure),
+				Percentage: number.GetPercentage(
+					*userStats.TotalBuildingExpenditure,
+					*userStats.TotalExpenditure,
+				),
+			},
+		},
+		Income: number.ConvertToRupiah(*userStats.TotalIncome),
+		Margin: number.ConvertToRupiah(*userStats.Margin),
+	}
+
+	r.SuccessResponse(
+		c,
+		"Berhasil mendapatkan detail statistik pengguna",
+		inspectorStatsDetailResponse, nil,
+	)
 }
