@@ -13,7 +13,7 @@ import (
 	"github.com/gin-gonic/gin"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
-	_ "tigaputera-backend/docs"
+	swagger "tigaputera-backend/docs"
 	"tigaputera-backend/sdk/jwt"
 	"tigaputera-backend/sdk/log"
 	"tigaputera-backend/sdk/password"
@@ -65,6 +65,8 @@ func (r *rest) RegisterMiddlewareAndRoutes() {
 	r.http.Use(gin.Recovery())
 	r.http.Use(r.SetTimeout)
 	r.http.Use(r.AddFieldsToContext)
+
+	r.setupSwagger()
 
 	// Global routes
 	r.http.GET("/ping", r.Ping)
@@ -144,17 +146,11 @@ func (r *rest) RegisterMiddlewareAndRoutes() {
 			r.DeleteProjectExpenditureDetail,
 		)
 	}
+}
 
-	// Medicine routes
-
-	// v1.Group("medicine")
-	// {
-	// 	v1.POST("medicine", r.CreateMedicine)
-	// 	v1.GET("medicine/:id", r.GetMedicine)
-	// 	v1.GET("medicine", r.GetListMedicines)
-	// 	v1.PUT("medicine/:id", r.UpdateMedicine)
-	// 	v1.DELETE("medicine/:id", r.DeleteMedicine)
-	// }
+func (r *rest) setupSwagger() {
+	swagger.SwaggerInfo.Host = os.Getenv("APP_HOST") + ":" + os.Getenv("APP_PORT")
+	swagger.SwaggerInfo.Schemes = []string{"http", "https"}
 }
 
 func (r *rest) Run() {
