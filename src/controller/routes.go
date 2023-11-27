@@ -102,7 +102,10 @@ func (r *rest) RegisterMiddlewareAndRoutes() {
 			r.AuthorizeRole(model.Inspector),
 			r.CreateInspectorIncome,
 		)
-
+		v1.GET(
+			"user/inspector/ledger",
+			r.GetInspectorLedger,
+		)
 		v1.GET("user/statistics", r.GetUserStats)
 		v1.GET("user/statistics/detail", r.GetUserStatsDetail)
 	}
@@ -135,6 +138,10 @@ func (r *rest) RegisterMiddlewareAndRoutes() {
 		v1.GET(
 			"project/:project_id/expenditure/:expenditure_id/detail",
 			r.GetProjectExpenditureDetailList,
+		)
+		v1.DELETE(
+			"project/:project_id/expenditure/:expenditure_id/detail/:expenditure_detail_id",
+			r.DeleteProjectExpenditureDetail,
 		)
 	}
 

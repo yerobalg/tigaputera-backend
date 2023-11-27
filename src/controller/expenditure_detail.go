@@ -205,3 +205,96 @@ func (r *rest) GetProjectExpenditureDetailList(c *gin.Context) {
 
 	r.SuccessResponse(c, "Berhasil mendapatkan detail pengeluaran proyek", expenditureDetailResponse, nil)
 }
+
+// @Summary Delete Project Expenditure Detail
+// @Description Delete project expenditure detail
+// @Tags Project Expenditure Detail
+// @Produce json
+// @Security BearerAuth
+// @Param project_id path  int true "project_id"
+// @Param expenditure_id path  int true "expenditure_id"
+// @Param expenditure_detail_id path  int true "expenditure_detail_id"
+// @Success 200 {object} model.HTTPResponse{}
+// @Failure 401 {object} model.HTTPResponse{}
+// @Failure 500 {object} model.HTTPResponse{}
+// @Router /v1/project/{project_id}/expenditure/{expenditure_id}/detail/{expenditure_detail_id} [DELETE]
+func (r *rest) DeleteProjectExpenditureDetail(c *gin.Context) {
+	ctx := c.Request.Context()
+	var param model.ExpenditureDetailParam
+
+	if err := r.BindParam(c, &param); err != nil {
+		r.ErrorResponse(c, err)
+		return
+	}
+
+	user := auth.GetUser(ctx)
+	param.InspectorID = user.ID
+	var expenditureDetail model.ExpenditureDetail
+
+	err := r.db.WithContext(ctx).
+		InnerJoins("Project").
+		InnerJoins("Expenditure").
+		InnerJoins("Inspector").
+		Where(&param).
+		First(&expenditureDetail).Error
+	if r.isNoRecordFound(err) {
+		r.ErrorResponse(c, errors.BadRequest("detail pengeluaran proyek tidak ditemukan"))
+		return
+	} else if err != nil {
+		r.ErrorResponse(c, errors.InternalServerError(err.Error()))
+		return
+	}
+
+	expenditureDetail.Expenditure.TotalPrice -= expenditureDetail.TotalPrice
+
+	var latestLedger model.InspectorLedger
+
+	if err := r.db.WithContext(ctx).
+		Where("inspector_id = ?", user.ID).
+		Order("created_at desc").
+		Take(&latestLedger).
+		Error; err != nil {
+		r.ErrorResponse(c, errors.InternalServerError(err.Error()))
+		return
+	}
+
+	inspectorLedger := model.InspectorLedger{
+		InspectorID:    user.ID,
+		LedgerType:     model.Debit,
+		Ref:            "Pembatalan pengeluaran proyek",
+		RefID:          &expenditureDetail.ID,
+		Amount:         expenditureDetail.TotalPrice,
+		CurrentBalance: latestLedger.FinalBalance,
+		FinalBalance:   latestLedger.FinalBalance + expenditureDetail.TotalPrice,
+		IsCanceled:     &[]bool{true}[0],
+	}
+
+	tx := r.db.WithContext(ctx).Begin()
+
+	if err := tx.Delete(&expenditureDetail).Error; err != nil {
+		tx.Rollback()
+		r.ErrorResponse(c, errors.InternalServerError(err.Error()))
+		return
+	}
+
+	if err := tx.Save(&expenditureDetail.Expenditure).Error; err != nil {
+		tx.Rollback()
+		r.ErrorResponse(c, errors.InternalServerError(err.Error()))
+		return
+	}
+
+	if err := tx.
+		Model(&model.InspectorLedger{}).
+		Create(&inspectorLedger).
+		Error; err != nil {
+		tx.Rollback()
+		r.ErrorResponse(c, errors.InternalServerError(err.Error()))
+	}
+
+	if err := tx.Commit().Error; err != nil {
+		r.ErrorResponse(c, errors.InternalServerError(err.Error()))
+		return
+	}
+
+	r.SuccessResponse(c, "Berhasil menghapus detail pengeluaran proyek", nil, nil)
+}

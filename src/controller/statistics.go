@@ -347,7 +347,7 @@ func (r *rest) sumTotalIncome(
 
 // @Summary Get User Stats
 // @Description Get user statistics
-// @Tags User
+// @Tags Statistics
 // @Produce json
 // @Security BearerAuth
 // @Success 200 {object} model.HTTPResponse{data=model.InspectorStatsResponse{}}
@@ -414,7 +414,7 @@ func (r *rest) GetUserStats(c *gin.Context) {
 
 // @Summary Get User Stats Detail
 // @Description Get user statistics detail
-// @Tags User
+// @Tags Statistics
 // @Produce json
 // @Security BearerAuth
 // @Param interval_month query int false "interval_month"
@@ -422,7 +422,7 @@ func (r *rest) GetUserStats(c *gin.Context) {
 // @Success 200 {object} model.HTTPResponse{data=model.InspectorStatsDetailResponse}
 // @Failure 401 {object} model.HTTPResponse{}
 // @Failure 500 {object} model.HTTPResponse{}
-// @Router /v1/user/statisics/detail [GET]
+// @Router /v1/user/statistics/detail [GET]
 func (r *rest) GetUserStatsDetail(c *gin.Context) {
 	ctx := c.Request.Context()
 
