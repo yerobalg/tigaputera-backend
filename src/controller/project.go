@@ -336,6 +336,7 @@ func (r *rest) GetProjectDetail(c *gin.Context) {
 // @Success 200 {object} model.HTTPResponse{}
 // @Failure 400 {object} model.HTTPResponse{}
 // @Failure 401 {object} model.HTTPResponse{}
+// @Failure 404 {object} model.HTTPResponse{}
 // @Failure 500 {object} model.HTTPResponse{}
 // @Router /v1/project/{project_id}/budget [PATCH]
 func (r *rest) UpdateProjectBudget(c *gin.Context) {
@@ -369,7 +370,7 @@ func (r *rest) UpdateProjectBudget(c *gin.Context) {
 		Where(&param).
 		Updates(&updatedProject)
 	if res.RowsAffected == 0 {
-		r.ErrorResponse(c, errors.BadRequest("Proyek tidak ditemukan"))
+		r.ErrorResponse(c, errors.NotFound("Proyek tidak ditemukan"))
 		return
 	} else if res.Error != nil {
 		r.ErrorResponse(c, errors.InternalServerError(res.Error.Error()))
@@ -389,6 +390,7 @@ func (r *rest) UpdateProjectBudget(c *gin.Context) {
 // @Success 200 {object} model.HTTPResponse{}
 // @Failure 400 {object} model.HTTPResponse{}
 // @Failure 401 {object} model.HTTPResponse{}
+// @Failure 404 {object} model.HTTPResponse{}
 // @Failure 500 {object} model.HTTPResponse{}
 // @Router /v1/project/{project_id}/status [PATCH]
 func (r *rest) UpdateProjectStatus(c *gin.Context) {
@@ -428,7 +430,7 @@ func (r *rest) UpdateProjectStatus(c *gin.Context) {
 		Where(&param).
 		Updates(&updatedProject)
 	if res.RowsAffected == 0 {
-		r.ErrorResponse(c, errors.BadRequest("Proyek tidak ditemukan"))
+		r.ErrorResponse(c, errors.NotFound("Proyek tidak ditemukan"))
 		return
 	} else if res.Error != nil {
 		r.ErrorResponse(c, errors.InternalServerError(res.Error.Error()))

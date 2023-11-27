@@ -22,7 +22,7 @@ import (
 func (r *rest) RefreshStatistics(c *gin.Context) {
 	schedulerKey := c.Request.Header.Get("scheduler-key")
 	if schedulerKey != os.Getenv("SCHEDULER_KEY") {
-		r.ErrorResponse(c, errors.Unauthorized("Scheduler key is not valid"))
+		r.ErrorResponse(c, errors.Unauthorized("scheduler-key tidak valid"))
 		return
 	}
 

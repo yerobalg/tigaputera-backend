@@ -14,6 +14,7 @@ import (
 // @Param loginBody body model.UserLoginBody true "body"
 // @Success 200 {object} model.HTTPResponse{data=model.UserLoginResponse}
 // @Failure 400 {object} model.HTTPResponse{}
+// @Failure 404 {object} model.HTTPResponse{}
 // @Failure 500 {object} model.HTTPResponse{}
 // @Router /v1/auth/login [POST]
 func (r *rest) Login(c *gin.Context) {
@@ -36,7 +37,7 @@ func (r *rest) Login(c *gin.Context) {
 	if err := r.db.WithContext(ctx).
 		Where(&userParam).
 		First(&user).Error; err != nil {
-		r.ErrorResponse(c, errors.BadRequest("Pengguna tidak ditemukan"))
+		r.ErrorResponse(c, errors.NotFound("Pengguna tidak ditemukan"))
 		return
 	}
 
@@ -90,6 +91,7 @@ func (r *rest) GetUserProfile(c *gin.Context) {
 // @Success 200 {object} model.HTTPResponse{}
 // @Failure 400 {object} model.HTTPResponse{}
 // @Failure 401 {object} model.HTTPResponse{}
+// @Failure 404 {object} model.HTTPResponse{}
 // @Failure 500 {object} model.HTTPResponse{}
 // @Router /v1/user/reset-password [PATCH]
 func (r *rest) ResetPassword(c *gin.Context) {
@@ -101,7 +103,7 @@ func (r *rest) ResetPassword(c *gin.Context) {
 	if err := r.db.WithContext(ctx).
 		Where(&userParam).
 		First(&user).Error; err != nil {
-		r.ErrorResponse(c, errors.BadRequest("Pengguna tidak ditemukan"))
+		r.ErrorResponse(c, errors.NotFound("Pengguna tidak ditemukan"))
 		return
 	}
 
@@ -246,9 +248,10 @@ func (r *rest) GetListInspector(c *gin.Context) {
 // @Tags User
 // @Produce json
 // @Security BearerAuth
-// @Param inspectorID path int true "inspectorID"
+// @Param user_id path int true "user_id"
 // @Success 200 {object} model.HTTPResponse{}
 // @Failure 401 {object} model.HTTPResponse{}
+// @Failure 404 {object} model.HTTPResponse{}
 // @Failure 500 {object} model.HTTPResponse{}
 // @Router /v1/user/inspector/{user_id} [DELETE]
 func (r *rest) DeactiveInspector(c *gin.Context) {
@@ -264,7 +267,7 @@ func (r *rest) DeactiveInspector(c *gin.Context) {
 		Delete(&model.User{}).Error
 
 	if r.isNoRecordFound(err) {
-		r.ErrorResponse(c, errors.BadRequest("Pengawas tidak ditemukan"))
+		r.ErrorResponse(c, errors.NotFound("Pengawas tidak ditemukan"))
 		return
 	} else if err != nil {
 		r.ErrorResponse(c, errors.InternalServerError(err.Error()))

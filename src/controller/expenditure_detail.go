@@ -19,6 +19,7 @@ import (
 // @Success 201 {object} model.HTTPResponse{}
 // @Failure 400 {object} model.HTTPResponse{}
 // @Failure 401 {object} model.HTTPResponse{}
+// @Failure 404 {object} model.HTTPResponse{}
 // @Failure 500 {object} model.HTTPResponse{}
 // @Router /v1/project/{project_id}/expenditure/{expenditure_id}/detail [POST]
 func (r *rest) CreateProjectExpenditureDetail(c *gin.Context) {
@@ -48,7 +49,7 @@ func (r *rest) CreateProjectExpenditureDetail(c *gin.Context) {
 		InnerJoins("Project", r.db.Where(&model.Project{InspectorID: user.ID})).
 		First(&projectExpenditure, param.ExpenditureID).Error
 	if r.isNoRecordFound(err) {
-		r.ErrorResponse(c, errors.BadRequest("pengeluaran proyek tidak ditemukan"))
+		r.ErrorResponse(c, errors.NotFound("pengeluaran proyek tidak ditemukan"))
 		return
 	} else if err != nil {
 		r.ErrorResponse(c, errors.InternalServerError(err.Error()))
@@ -142,6 +143,7 @@ func (r *rest) CreateProjectExpenditureDetail(c *gin.Context) {
 // @Param expenditure_id path  int true "expenditure_id"
 // @Success 200 {object} model.HTTPResponse{data=model.ExpenditureDetailListResponse}
 // @Failure 401 {object} model.HTTPResponse{}
+// @Failure 404 {object} model.HTTPResponse{}
 // @Failure 500 {object} model.HTTPResponse{}
 // @Router /v1/project/{project_id}/expenditure/{expenditure_id}/detail [GET]
 func (r *rest) GetProjectExpenditureDetailList(c *gin.Context) {
@@ -169,7 +171,7 @@ func (r *rest) GetProjectExpenditureDetailList(c *gin.Context) {
 	if r.isNoRecordFound(err) {
 		r.ErrorResponse(
 			c,
-			errors.BadRequest("pengeluaran proyek tidak ditemukan"),
+			errors.NotFound("pengeluaran proyek tidak ditemukan"),
 		)
 		return
 	} else if err != nil {
@@ -216,6 +218,7 @@ func (r *rest) GetProjectExpenditureDetailList(c *gin.Context) {
 // @Param expenditure_detail_id path  int true "expenditure_detail_id"
 // @Success 200 {object} model.HTTPResponse{}
 // @Failure 401 {object} model.HTTPResponse{}
+// @Failure 404 {object} model.HTTPResponse{}
 // @Failure 500 {object} model.HTTPResponse{}
 // @Router /v1/project/{project_id}/expenditure/{expenditure_id}/detail/{expenditure_detail_id} [DELETE]
 func (r *rest) DeleteProjectExpenditureDetail(c *gin.Context) {
@@ -238,7 +241,7 @@ func (r *rest) DeleteProjectExpenditureDetail(c *gin.Context) {
 		Where(&param).
 		First(&expenditureDetail).Error
 	if r.isNoRecordFound(err) {
-		r.ErrorResponse(c, errors.BadRequest("detail pengeluaran proyek tidak ditemukan"))
+		r.ErrorResponse(c, errors.NotFound("detail pengeluaran proyek tidak ditemukan"))
 		return
 	} else if err != nil {
 		r.ErrorResponse(c, errors.InternalServerError(err.Error()))

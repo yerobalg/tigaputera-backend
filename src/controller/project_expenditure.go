@@ -17,6 +17,7 @@ import (
 // @Success 201 {object} model.HTTPResponse{}
 // @Failure 400 {object} model.HTTPResponse{}
 // @Failure 401 {object} model.HTTPResponse{}
+// @Failure 404 {object} model.HTTPResponse{}
 // @Failure 500 {object} model.HTTPResponse{}
 // @Router /v1/project/{project_id}/expenditure [POST]
 func (r *rest) CreateProjectExpenditure(c *gin.Context) {
@@ -53,7 +54,7 @@ func (r *rest) CreateProjectExpenditure(c *gin.Context) {
 		Take(&latestProjectExpenditure).Error
 
 	if r.isNoRecordFound(err) {
-		r.ErrorResponse(c, errors.BadRequest("Proyek tidak ditemukan"))
+		r.ErrorResponse(c, errors.NotFound("Proyek tidak ditemukan"))
 		return
 	} else if err != nil {
 		r.ErrorResponse(c, errors.InternalServerError(err.Error()))

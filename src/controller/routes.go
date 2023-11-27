@@ -93,7 +93,7 @@ func (r *rest) RegisterMiddlewareAndRoutes() {
 			r.GetListInspector,
 		)
 		v1.DELETE(
-			"user/inpsector/:user_id",
+			"user/inspector/:user_id",
 			r.AuthorizeRole(model.Admin),
 			r.DeactiveInspector,
 		)
