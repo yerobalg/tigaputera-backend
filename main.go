@@ -8,6 +8,8 @@ import (
 	"tigaputera-backend/sdk/validator"
 	"tigaputera-backend/src/controller"
 	"tigaputera-backend/src/database"
+
+	"os"
 )
 
 // @title Tigaputera Backend API
@@ -28,8 +30,11 @@ func main() {
 }
 
 func loadEnv() {
-	err := godotenv.Load()
-	if err != nil {
+	if os.Getenv("ENV") == "production" || os.Getenv("ENV") == "staging" {
+		return
+	}
+
+	if err := godotenv.Load(); err != nil {
 		panic(err)
 	}
 }
