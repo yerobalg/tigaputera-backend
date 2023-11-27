@@ -1,7 +1,14 @@
 package controller
 
 import (
+	"context"
+	"fmt"
+	"net/http"
 	"os"
+	"os/signal"
+	"sync"
+	"syscall"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	swaggerFiles "github.com/swaggo/files"
@@ -14,6 +21,8 @@ import (
 	"tigaputera-backend/src/database"
 	"tigaputera-backend/src/model"
 )
+
+var once = sync.Once{}
 
 type rest struct {
 	http      *gin.Engine
@@ -33,16 +42,19 @@ func Init(
 ) *rest {
 	r := &rest{}
 
-	gin.SetMode(gin.ReleaseMode)
+	// Initialize server with graceful shutdown
+	once.Do(func() {
+		gin.SetMode(gin.ReleaseMode)
 
-	r.http = gin.New()
-	r.log = log
-	r.db = db
-	r.jwt = jwt
-	r.password = password
-	r.validator = validator
+		r.http = gin.New()
+		r.log = log
+		r.db = db
+		r.jwt = jwt
+		r.password = password
+		r.validator = validator
 
-	r.RegisterMiddlewareAndRoutes()
+		r.RegisterMiddlewareAndRoutes()
+	})
 
 	return r
 }
@@ -142,11 +154,49 @@ func (r *rest) setupSwagger() {
 }
 
 func (r *rest) Run() {
-	port := "8080"
+	/*
+		Create context that listens for the interrupt signal from the OS.
+		This will allow us to gracefully shutdown the server.
+	*/
+	c := context.Background()
+	ctx, stop := signal.NotifyContext(c, syscall.SIGINT, syscall.SIGTERM)
+	defer stop()
+
+	port := ":8080"
 	if os.Getenv("APP_PORT") != "" {
-		port = os.Getenv("APP_PORT")
+		port = ":" + os.Getenv("APP_PORT")
 	}
-	r.http.Run(":" + port)
+	server := &http.Server{
+		Addr:              port,
+		Handler:           r.http,
+		ReadHeaderTimeout: 2 * time.Second,
+	}
+
+	// Run the server in a goroutine so that it doesn't block the graceful shutdown handling below
+
+	go func() {
+		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			r.log.Error(ctx, err.Error())
+		}
+	}()
+
+	r.log.Info(context.Background(), "Server is running on port "+os.Getenv("APP_PORT"))
+
+	// Block until we receive our signal.
+	<-ctx.Done()
+
+	// Restore default behavior on the interrupt signal and notify user of shutdown.
+	stop()
+	r.log.Info(context.Background(), "Shutting down server...")
+
+	// Create a deadline to wait for.
+	quitCtx, cancel := context.WithTimeout(c, 10*time.Second)
+	defer cancel()
+	if err := server.Shutdown(quitCtx); err != nil {
+		r.log.Fatal(quitCtx, fmt.Sprintf("Server Shutdown error: %s", err.Error()))
+	}
+
+	r.log.Info(context.Background(), "Server gracefully stopped")
 }
 
 // @Summary Health Check
