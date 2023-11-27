@@ -149,7 +149,7 @@ func (r *rest) RegisterMiddlewareAndRoutes() {
 }
 
 func (r *rest) setupSwagger() {
-	swagger.SwaggerInfo.Host = os.Getenv("APP_HOST") + ":" + os.Getenv("SWAGGER_PORT")
+	swagger.SwaggerInfo.Host = os.Getenv("APP_HOST")
 	swagger.SwaggerInfo.Schemes = []string{"http", "https"}
 }
 
