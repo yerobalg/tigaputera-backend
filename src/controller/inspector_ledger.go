@@ -77,7 +77,7 @@ func (r *rest) CreateInspectorIncome(c *gin.Context) {
 // @Param limit query int false "limit"
 // @Param interval_month query int false "interval_month"
 // @Param inspector_id query int false "inspector_id"
-// @Success 200 {object} model.HTTPResponse{model.InspectorLedgerResponse{}}
+// @Success 200 {object} model.HTTPResponse{data=model.InspectorLedgerResponse}
 // @Failure 400 {object} model.HTTPResponse{}
 // @Failure 401 {object} model.HTTPResponse{}
 // @Failure 500 {object} model.HTTPResponse{}
