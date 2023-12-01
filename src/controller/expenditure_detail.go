@@ -1,11 +1,13 @@
 package controller
 
 import (
-	"fmt"
 	"github.com/gin-gonic/gin"
 	"tigaputera-backend/sdk/auth"
 	errors "tigaputera-backend/sdk/error"
+	"tigaputera-backend/sdk/number"
 	"tigaputera-backend/src/model"
+
+	"fmt"
 )
 
 // @Summary Create Project Expenditure Detail
@@ -62,7 +64,7 @@ func (r *rest) CreateProjectExpenditureDetail(c *gin.Context) {
 		InspectorID: user.ID,
 	}
 	err = r.db.WithContext(ctx).
-		Where(&inspectorLedgerParam).
+		Where("inspector_id = ?", inspectorLedgerParam.InspectorID).
 		Order("created_at desc").
 		Take(&inspectorLedger).Error
 
@@ -155,32 +157,41 @@ func (r *rest) GetProjectExpenditureDetailList(c *gin.Context) {
 		return
 	}
 
-	rows, err := r.db.WithContext(ctx).
-		Model(&model.ExpenditureDetail{}).
-		InnerJoins(
-			"Expenditure",
-			r.db.Where(&model.ProjectExpenditure{ProjectID: param.ProjectID}),
-		).
-		InnerJoins(
-			"Project",
-			r.db.Where(&model.Project{ID: param.ProjectID}),
-		).
-		InnerJoins("Project.Inspector").
-		Rows()
-
+	var projectExpenditure model.ProjectExpenditure
+	err := r.db.WithContext(ctx).
+		InnerJoins("Project", r.db.Where(&model.Project{ID: param.ProjectID})).
+		First(&projectExpenditure, param.ExpenditureID).Error
 	if r.isNoRecordFound(err) {
-		r.ErrorResponse(
-			c,
-			errors.NotFound("pengeluaran proyek tidak ditemukan"),
-		)
+		r.ErrorResponse(c, errors.NotFound("pengeluaran proyek tidak ditemukan"))
 		return
 	} else if err != nil {
 		r.ErrorResponse(c, errors.InternalServerError(err.Error()))
 		return
 	}
 
+	var inspector model.User
+	if err := r.db.WithContext(ctx).
+		First(&inspector, projectExpenditure.Project.InspectorID).
+		Error; err != nil {
+		r.ErrorResponse(c, errors.InternalServerError(err.Error()))
+	}
+
+	rows, err := r.db.WithContext(ctx).
+		Model(&model.ExpenditureDetail{}).
+		Where(
+			"expenditure_id = ? AND project_id = ?",
+			param.ExpenditureID, param.ProjectID,
+		).
+		Rows()
+
+	if err != nil {
+		r.ErrorResponse(c, errors.InternalServerError(err.Error()))
+		return
+	}
 	defer rows.Close()
-	var expenditureDetailResponse model.ExpenditureDetailListResponse
+
+	expenditureDetails := []model.ExpenditureDetailList{}
+	var sumTotal int64
 	for rows.Next() {
 		var expenditureDetail model.ExpenditureDetail
 		if err := r.db.ScanRows(rows, &expenditureDetail); err != nil {
@@ -188,24 +199,27 @@ func (r *rest) GetProjectExpenditureDetailList(c *gin.Context) {
 			return
 		}
 
-		expenditureDetailResponse.ExpenditureName = expenditureDetail.Expenditure.Name
-		expenditureDetailResponse.ProjectName = expenditureDetail.Project.Name
-		expenditureDetailResponse.InspectorName = expenditureDetail.Project.Inspector.Name
-
-		expenditureDetailList := model.ExpenditureDetailList{
+		expenditureDetailRes := model.ExpenditureDetailList{
 			Name:       expenditureDetail.Name,
-			Price:      expenditureDetail.Price,
+			Price:      number.ConvertToRupiah(expenditureDetail.Price),
 			Amount:     expenditureDetail.Amount,
-			TotalPrice: expenditureDetail.TotalPrice,
+			TotalPrice: number.ConvertToRupiah(expenditureDetail.TotalPrice),
 		}
 
-		expenditureDetailResponse.Details = append(
-			expenditureDetailResponse.Details,
-			expenditureDetailList,
-		)
+		expenditureDetails = append(expenditureDetails, expenditureDetailRes)
+
+		sumTotal += expenditureDetail.TotalPrice
 	}
 
-	r.SuccessResponse(c, "Berhasil mendapatkan detail pengeluaran proyek", expenditureDetailResponse, nil)
+	expenditureDetailListResponse := model.ExpenditureDetailListResponse{
+		ExpenditureName: projectExpenditure.Name,
+		ProjectName:     projectExpenditure.Project.Name,
+		InspectorName:   inspector.Name,
+		Details:         expenditureDetails,
+		SumTotal:        number.ConvertToRupiah(sumTotal),
+	}
+
+	r.SuccessResponse(c, "Berhasil mendapatkan detail pengeluaran proyek", expenditureDetailListResponse, nil)
 }
 
 // @Summary Delete Project Expenditure Detail

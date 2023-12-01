@@ -39,8 +39,9 @@ func (r *rest) CreateInspectorIncome(c *gin.Context) {
 	user := auth.GetUser(ctx)
 	var previousBalance int64
 	err := r.db.WithContext(ctx).
+		Where("inspector_id = ?", user.ID).
 		Order("created_at desc").
-		First(&latestLedger, user.ID).Error
+		Take(&latestLedger).Error
 
 	if r.isNoRecordFound(err) {
 		previousBalance = 0
@@ -131,8 +132,8 @@ func (r *rest) GetInspectorLedger(c *gin.Context) {
 	rows, err := r.db.WithContext(ctx).
 		Model(&model.InspectorLedger{}).
 		Where(
-			"created_at >= ? AND inspector_id = ?", 
-			startTime, 
+			"created_at >= ? AND inspector_id = ?",
+			startTime,
 			param.InspectorID,
 		).
 		Order("created_at desc").
@@ -168,8 +169,8 @@ func (r *rest) GetInspectorLedger(c *gin.Context) {
 	if err := r.db.WithContext(ctx).
 		Model(&model.InspectorLedger{}).
 		Where(
-			"created_at >= ? AND inspector_id = ?", 
-			startTime, 
+			"created_at >= ? AND inspector_id = ?",
+			startTime,
 			param.InspectorID,
 		).
 		Count(&param.TotalElement).Error; err != nil {
@@ -186,8 +187,9 @@ func (r *rest) GetInspectorLedger(c *gin.Context) {
 
 	var latestLedger model.InspectorLedger
 	err = r.db.WithContext(ctx).
+		Where("inspector_id = ?", param.InspectorID).
 		Order("created_at desc").
-		Take(&latestLedger, param.InspectorID).
+		Take(&latestLedger).
 		Error
 	if r.isNoRecordFound(err) {
 		account.CurrentBalance = number.ConvertToRupiah(0)

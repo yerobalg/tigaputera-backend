@@ -42,9 +42,9 @@ type ExpenditureDetailParam struct {
 
 type ExpenditureDetailList struct {
 	Name       string `json:"name"`
-	Price      int64  `json:"price"`
+	Price      string  `json:"price"`
 	Amount     int64  `json:"amount"`
-	TotalPrice int64  `json:"totalPrice"`
+	TotalPrice string  `json:"totalPrice"`
 }
 
 type ExpenditureDetailListResponse struct {
@@ -52,5 +52,5 @@ type ExpenditureDetailListResponse struct {
 	ProjectName     string                  `json:"projectName"`
 	InspectorName   string                  `json:"inspectorName"`
 	Details         []ExpenditureDetailList `json:"details"`
-	SumTotal        int64                   `json:"sumTotal"`
+	SumTotal        string                   `json:"sumTotal"`
 }
