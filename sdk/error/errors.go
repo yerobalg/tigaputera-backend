@@ -33,7 +33,7 @@ func NewWithCode(code int64, message, errType string) error {
 }
 
 func NotFound(entity string) error {
-	return NewWithCode(http.StatusNotFound, entity+" not found", NotFoundType)
+	return NewWithCode(http.StatusNotFound, entity, NotFoundType)
 }
 
 func InternalServerError(message string) error {

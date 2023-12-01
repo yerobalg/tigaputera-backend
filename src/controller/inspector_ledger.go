@@ -130,8 +130,11 @@ func (r *rest) GetInspectorLedger(c *gin.Context) {
 
 	rows, err := r.db.WithContext(ctx).
 		Model(&model.InspectorLedger{}).
-		Where(&param).
-		Where("created_at >= ?", startTime).
+		Where(
+			"created_at >= ? AND inspector_id = ?", 
+			startTime, 
+			param.InspectorID,
+		).
 		Order("created_at desc").
 		Limit(int(param.Limit)).
 		Offset(int(param.Offset)).
@@ -164,8 +167,11 @@ func (r *rest) GetInspectorLedger(c *gin.Context) {
 
 	if err := r.db.WithContext(ctx).
 		Model(&model.InspectorLedger{}).
-		Where(&param).
-		Where("created_at >= ?", startTime).
+		Where(
+			"created_at >= ? AND inspector_id = ?", 
+			startTime, 
+			param.InspectorID,
+		).
 		Count(&param.TotalElement).Error; err != nil {
 		r.ErrorResponse(c, errors.InternalServerError(err.Error()))
 		return

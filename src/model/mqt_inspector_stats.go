@@ -22,7 +22,7 @@ type MqtInspectorStats struct {
 
 type InspectorStatsParam struct {
 	IntervalMonth int64 `form:"interval_month"`
-	UserID        int64 `form:"user_id"`
+	InspectorID   int64 `form:"user_id"`
 	StartTime     int64
 }
 
@@ -79,3 +79,4 @@ type StatsString struct {
 	Total      string  `json:"total"`
 	Percentage float64 `json:"percentage"`
 }
+

@@ -360,9 +360,9 @@ func (r *rest) GetUserStats(c *gin.Context) {
 
 	var userStatsParam model.InspectorStatsParam
 	if user.Role == string(model.Inspector) {
-		userStatsParam.UserID = user.ID
+		userStatsParam.InspectorID = user.ID
 	} else {
-		userStatsParam.UserID = 0
+		userStatsParam.InspectorID = 0
 	}
 
 	lastMonth := time.Now().UTC().AddDate(0, -1, 0)
@@ -434,7 +434,7 @@ func (r *rest) GetUserStatsDetail(c *gin.Context) {
 
 	user := auth.GetUser(ctx)
 	if user.Role == string(model.Inspector) {
-		userStatsParam.UserID = user.ID
+		userStatsParam.InspectorID = user.ID
 	}
 
 	intervalMonth := int(userStatsParam.IntervalMonth)
@@ -458,96 +458,150 @@ func (r *rest) GetUserStatsDetail(c *gin.Context) {
 	err := r.db.WithContext(ctx).
 		Where(
 			"inspector_id = ? AND start_time = ?",
-			userStatsParam.UserID,
+			userStatsParam.InspectorID,
 			userStatsParam.StartTime,
 		).
 		Take(&userStats).Error
 
+	var inspectorStatsDetailResponse model.InspectorStatsDetailResponse
+
 	if r.isNoRecordFound(err) {
-		r.ErrorResponse(c, errors.BadRequest("Statistik pengguna tidak ditemukan"))
-		return
+		inspectorStatsDetailResponse = model.InspectorStatsDetailResponse{
+			LastUpdated:       userStatsParam.StartTime,
+			InspectorID:       userStatsParam.InspectorID,
+			InspectorUsername: user.Username,
+			IntervalMonth:     userStatsParam.IntervalMonth,
+			ProjectCount: model.TotalProjectStats{
+				TotalProject: 0,
+				Drainage: model.Stats{
+					Name:       "Drainase",
+					Total:      0,
+					Percentage: 0,
+				},
+				Ashpalt: model.Stats{
+					Name:       "Hotmix",
+					Total:      0,
+					Percentage: 0,
+				},
+				Concrete: model.Stats{
+					Name:       "Beton",
+					Total:      0,
+					Percentage: 0,
+				},
+				Building: model.Stats{
+					Name:       "Bangunan",
+					Total:      0,
+					Percentage: 0,
+				},
+			},
+			Expenditure: model.TotalExpenditureStats{
+				TotalExpenditure: number.ConvertToRupiah(0),
+				Drainage: model.StatsString{
+					Name:       "Drainase",
+					Total:      number.ConvertToRupiah(0),
+					Percentage: 0,
+				},
+				Ashpalt: model.StatsString{
+					Name:       "Hotmix",
+					Total:      number.ConvertToRupiah(0),
+					Percentage: 0,
+				},
+				Concrete: model.StatsString{
+					Name:       "Beton",
+					Total:      number.ConvertToRupiah(0),
+					Percentage: 0,
+				},
+				Building: model.StatsString{
+					Name:       "Bangunan",
+					Total:      number.ConvertToRupiah(0),
+					Percentage: 0,
+				},
+			},
+			Income: number.ConvertToRupiah(0),
+			Margin: number.ConvertToRupiah(0),
+		}
 	} else if err != nil {
 		r.ErrorResponse(c, errors.InternalServerError(err.Error()))
 		return
-	}
-
-	inspectorStatsDetailResponse := model.InspectorStatsDetailResponse{
-		LastUpdated:       userStats.EndTime,
-		InspectorID:       *userStats.InspectorID,
-		InspectorUsername: userStats.InspectorUsername,
-		IntervalMonth:     userStats.IntervalMonth,
-		ProjectCount: model.TotalProjectStats{
-			TotalProject: *userStats.TotalProject,
-			Drainage: model.Stats{
-				Name:  "Drainase",
-				Total: *userStats.TotalDrainageProject,
-				Percentage: number.GetPercentage(
-					*userStats.TotalDrainageProject,
-					*userStats.TotalProject,
-				),
+	} else {
+		inspectorStatsDetailResponse = model.InspectorStatsDetailResponse{
+			LastUpdated:       userStats.EndTime,
+			InspectorID:       *userStats.InspectorID,
+			InspectorUsername: userStats.InspectorUsername,
+			IntervalMonth:     userStats.IntervalMonth,
+			ProjectCount: model.TotalProjectStats{
+				TotalProject: *userStats.TotalProject,
+				Drainage: model.Stats{
+					Name:  "Drainase",
+					Total: *userStats.TotalDrainageProject,
+					Percentage: number.GetPercentage(
+						*userStats.TotalDrainageProject,
+						*userStats.TotalProject,
+					),
+				},
+				Ashpalt: model.Stats{
+					Name:  "Hotmix",
+					Total: *userStats.TotalAshpaltProject,
+					Percentage: number.GetPercentage(
+						*userStats.TotalAshpaltProject,
+						*userStats.TotalProject,
+					),
+				},
+				Concrete: model.Stats{
+					Name:  "Beton",
+					Total: *userStats.TotalConcreteProject,
+					Percentage: number.GetPercentage(
+						*userStats.TotalConcreteProject,
+						*userStats.TotalProject,
+					),
+				},
+				Building: model.Stats{
+					Name:  "Bangunan",
+					Total: *userStats.TotalBuildingProject,
+					Percentage: number.GetPercentage(
+						*userStats.TotalBuildingProject,
+						*userStats.TotalProject,
+					),
+				},
 			},
-			Ashpalt: model.Stats{
-				Name:  "Hotmix",
-				Total: *userStats.TotalAshpaltProject,
-				Percentage: number.GetPercentage(
-					*userStats.TotalAshpaltProject,
-					*userStats.TotalProject,
-				),
+			Expenditure: model.TotalExpenditureStats{
+				TotalExpenditure: number.ConvertToRupiah(*userStats.TotalExpenditure),
+				Drainage: model.StatsString{
+					Name:  "Drainase",
+					Total: number.ConvertToRupiah(*userStats.TotalDrainageExpenditure),
+					Percentage: number.GetPercentage(
+						*userStats.TotalDrainageExpenditure,
+						*userStats.TotalExpenditure,
+					),
+				},
+				Ashpalt: model.StatsString{
+					Name:  "Hotmix",
+					Total: number.ConvertToRupiah(*userStats.TotalAshpaltExpenditure),
+					Percentage: number.GetPercentage(
+						*userStats.TotalAshpaltExpenditure,
+						*userStats.TotalExpenditure,
+					),
+				},
+				Concrete: model.StatsString{
+					Name:  "Beton",
+					Total: number.ConvertToRupiah(*userStats.TotalConcreteExpenditure),
+					Percentage: number.GetPercentage(
+						*userStats.TotalConcreteExpenditure,
+						*userStats.TotalExpenditure,
+					),
+				},
+				Building: model.StatsString{
+					Name:  "Bangunan",
+					Total: number.ConvertToRupiah(*userStats.TotalBuildingExpenditure),
+					Percentage: number.GetPercentage(
+						*userStats.TotalBuildingExpenditure,
+						*userStats.TotalExpenditure,
+					),
+				},
 			},
-			Concrete: model.Stats{
-				Name:  "Beton",
-				Total: *userStats.TotalConcreteProject,
-				Percentage: number.GetPercentage(
-					*userStats.TotalConcreteProject,
-					*userStats.TotalProject,
-				),
-			},
-			Building: model.Stats{
-				Name:  "Bangunan",
-				Total: *userStats.TotalBuildingProject,
-				Percentage: number.GetPercentage(
-					*userStats.TotalBuildingProject,
-					*userStats.TotalProject,
-				),
-			},
-		},
-		Expenditure: model.TotalExpenditureStats{
-			TotalExpenditure: number.ConvertToRupiah(*userStats.TotalExpenditure),
-			Drainage: model.StatsString{
-				Name:  "Drainase",
-				Total: number.ConvertToRupiah(*userStats.TotalDrainageExpenditure),
-				Percentage: number.GetPercentage(
-					*userStats.TotalDrainageExpenditure,
-					*userStats.TotalExpenditure,
-				),
-			},
-			Ashpalt: model.StatsString{
-				Name:  "Hotmix",
-				Total: number.ConvertToRupiah(*userStats.TotalAshpaltExpenditure),
-				Percentage: number.GetPercentage(
-					*userStats.TotalAshpaltExpenditure,
-					*userStats.TotalExpenditure,
-				),
-			},
-			Concrete: model.StatsString{
-				Name:  "Beton",
-				Total: number.ConvertToRupiah(*userStats.TotalConcreteExpenditure),
-				Percentage: number.GetPercentage(
-					*userStats.TotalConcreteExpenditure,
-					*userStats.TotalExpenditure,
-				),
-			},
-			Building: model.StatsString{
-				Name:  "Bangunan",
-				Total: number.ConvertToRupiah(*userStats.TotalBuildingExpenditure),
-				Percentage: number.GetPercentage(
-					*userStats.TotalBuildingExpenditure,
-					*userStats.TotalExpenditure,
-				),
-			},
-		},
-		Income: number.ConvertToRupiah(*userStats.TotalIncome),
-		Margin: number.ConvertToRupiah(*userStats.Margin),
+			Income: number.ConvertToRupiah(*userStats.TotalIncome),
+			Margin: number.ConvertToRupiah(*userStats.Margin),
+		}
 	}
 
 	r.SuccessResponse(
