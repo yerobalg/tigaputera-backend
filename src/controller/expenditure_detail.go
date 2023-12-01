@@ -200,6 +200,7 @@ func (r *rest) GetProjectExpenditureDetailList(c *gin.Context) {
 		}
 
 		expenditureDetailRes := model.ExpenditureDetailList{
+			ID:         expenditureDetail.ID,
 			Name:       expenditureDetail.Name,
 			Price:      number.ConvertToRupiah(expenditureDetail.Price),
 			Amount:     expenditureDetail.Amount,
