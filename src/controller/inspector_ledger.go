@@ -1,11 +1,12 @@
 package controller
 
 import (
-	"github.com/gin-gonic/gin"
+	"context"
 	"tigaputera-backend/sdk/auth"
 	errors "tigaputera-backend/sdk/error"
 	"tigaputera-backend/sdk/number"
 	"tigaputera-backend/src/model"
+	"github.com/gin-gonic/gin"
 
 	"time"
 )
@@ -114,35 +115,55 @@ func (r *rest) GetInspectorLedger(c *gin.Context) {
 		beginMonth.Location(),
 	).Unix()
 
-	var userAccount model.User
+	var inspectorLedgerResponse model.InspectorLedgerResponse
+	var err error
 
-	if param.InspectorID != 0 {
-		if err := r.db.WithContext(ctx).
-			Where("id = ?", param.InspectorID).
-			First(&userAccount).Error; err != nil {
-			r.ErrorResponse(c, errors.InternalServerError(err.Error()))
-			return
-		}
+	if param.InspectorID == 0 {
+		inspectorLedgerResponse, err = r.getAllInspectorLedger(
+			ctx,
+			&param.PaginationParam,
+			startTime,
+		)
 	} else {
-		userAccount.Name = "Semua Pengawas"
-	}
-
-	param.PaginationParam.SetDefaultPagination()
-
-	rows, err := r.db.WithContext(ctx).
-		Model(&model.InspectorLedger{}).
-		Where(
-			"created_at >= ? AND inspector_id = ?",
+		inspectorLedgerResponse, err = r.getSingleInspectorLedger(
+			ctx,
+			&param.PaginationParam,
 			startTime,
 			param.InspectorID,
-		).
-		Order("created_at desc").
-		Limit(int(param.Limit)).
-		Offset(int(param.Offset)).
-		Rows()
+		)
+	}
+
 	if err != nil {
 		r.ErrorResponse(c, errors.InternalServerError(err.Error()))
 		return
+	}
+
+	r.SuccessResponse(
+		c, 
+		"Berhasil mendapatkan buku kas pengawas", 
+		inspectorLedgerResponse, 
+		&param.PaginationParam,
+	)
+}
+
+func (r *rest) getAllInspectorLedger(
+	ctx context.Context,
+	param *model.PaginationParam,
+	startTime int64,
+) (model.InspectorLedgerResponse, error) {
+	var inspectorLedgerResponse model.InspectorLedgerResponse
+
+	param.SetDefaultPagination()
+	rows, err := r.db.WithContext(ctx).
+		Model(&model.InspectorLedger{}).
+		InnerJoins("Inspector").
+		Where("inspector_ledgers.created_at >= ?", startTime).
+		Limit(int(param.Limit)).
+		Offset(int(param.Offset)).
+		Order("inspector_ledgers.created_at desc").
+		Rows()
+	if err != nil {
+		return inspectorLedgerResponse, err
 	}
 
 	transactions := []model.InspectorLedgerTransaction{}
@@ -151,16 +172,14 @@ func (r *rest) GetInspectorLedger(c *gin.Context) {
 	for rows.Next() {
 		var ledger model.InspectorLedger
 		if err := r.db.WithContext(ctx).ScanRows(rows, &ledger); err != nil {
-			r.ErrorResponse(c, errors.InternalServerError(err.Error()))
-			return
+			return inspectorLedgerResponse, err
 		}
 
 		transaction := model.InspectorLedgerTransaction{
-			Timestamp:     ledger.CreatedAt,
-			InspectorName: userAccount.Name,
-			Type:          string(ledger.LedgerType),
-			RefName:       ledger.Ref,
-			Amount:        number.ConvertToRupiah(ledger.Amount),
+			Timestamp: ledger.CreatedAt,
+			Type:      string(ledger.LedgerType),
+			RefName:   ledger.Inspector.Name,
+			Amount:    number.ConvertToRupiah(ledger.Amount),
 		}
 
 		transactions = append(transactions, transaction)
@@ -168,47 +187,108 @@ func (r *rest) GetInspectorLedger(c *gin.Context) {
 
 	if err := r.db.WithContext(ctx).
 		Model(&model.InspectorLedger{}).
-		Where(
-			"created_at >= ? AND inspector_id = ?",
-			startTime,
-			param.InspectorID,
-		).
+		Where("created_at >= ?", startTime).
 		Count(&param.TotalElement).Error; err != nil {
-		r.ErrorResponse(c, errors.InternalServerError(err.Error()))
-		return
+		return inspectorLedgerResponse, err
 	}
 
-	param.PaginationParam.ProcessPagination(int64(len(transactions)))
+	param.ProcessPagination(int64(len(transactions)))
 
-	account := model.InspectorLedgerAccount{
-		InspectorID:   userAccount.ID,
-		InspectorName: userAccount.Name,
+	var finalBalance int64
+
+	if err := r.db.WithContext(ctx).Raw(`
+		SELECT
+			SUM(IL.final_balance) AS final_balance
+		FROM inspector_ledgers IL
+		INNER JOIN (
+			SELECT
+				inspector_id,
+				MAX(created_at) AS created_at
+			FROM inspector_ledgers
+			GROUP BY 1
+		) AS IL2 ON IL.inspector_id = IL2.inspector_id 
+			AND IL.created_at = IL2.created_at
+			AND IL.deleted_at IS NULL
+	`).Scan(&finalBalance).Error; err != nil {
+		return inspectorLedgerResponse, err
 	}
 
-	var latestLedger model.InspectorLedger
-	err = r.db.WithContext(ctx).
-		Where("inspector_id = ?", param.InspectorID).
-		Order("created_at desc").
-		Take(&latestLedger).
-		Error
-	if r.isNoRecordFound(err) {
-		account.CurrentBalance = number.ConvertToRupiah(0)
-	} else if err != nil {
-		r.ErrorResponse(c, errors.InternalServerError(err.Error()))
-		return
-	} else {
-		account.CurrentBalance = number.ConvertToRupiah(latestLedger.FinalBalance)
-	}
-
-	inspectorLedgerResponse := model.InspectorLedgerResponse{
-		Account:      account,
+	inspectorLedgerResponse = model.InspectorLedgerResponse{
+		Account: model.InspectorLedgerAccount{
+			InspectorName:  "Semua Pengawas",
+			CurrentBalance: number.ConvertToRupiah(finalBalance),
+		},
 		Transactions: transactions,
 	}
 
-	r.SuccessResponse(
-		c,
-		"Berhasil mendapatkan buku kas pengawas",
-		inspectorLedgerResponse,
-		&param.PaginationParam,
-	)
+	return inspectorLedgerResponse, nil
+}
+
+func (r *rest) getSingleInspectorLedger(
+	ctx context.Context,
+	param *model.PaginationParam,
+	startTime int64,
+	inspectorID int64,
+) (model.InspectorLedgerResponse, error) {
+	var inspectorLedgerResponse model.InspectorLedgerResponse
+
+	param.SetDefaultPagination()
+	rows, err := r.db.WithContext(ctx).
+		Model(&model.InspectorLedger{}).
+		Where("created_at >= ? AND inspector_id = ?", startTime, inspectorID).
+		Limit(int(param.Limit)).
+		Offset(int(param.Offset)).
+		Order("created_at desc").
+		Rows()
+	if err != nil {
+		return inspectorLedgerResponse, err
+	}
+
+	transactions := []model.InspectorLedgerTransaction{}
+
+	defer rows.Close()
+	for rows.Next() {
+		var ledger model.InspectorLedger
+		if err := r.db.WithContext(ctx).ScanRows(rows, &ledger); err != nil {
+			return inspectorLedgerResponse, err
+		}
+
+		transaction := model.InspectorLedgerTransaction{
+			Timestamp: ledger.CreatedAt,
+			Type:      string(ledger.LedgerType),
+			RefName:   ledger.Ref,
+			Amount:    number.ConvertToRupiah(ledger.Amount),
+		}
+
+		transactions = append(transactions, transaction)
+	}
+
+	if err := r.db.WithContext(ctx).
+		Model(&model.InspectorLedger{}).
+		Where("created_at >= ? AND inspector_id = ?", startTime, inspectorID).
+		Count(&param.TotalElement).Error; err != nil {
+		return inspectorLedgerResponse, err
+	}
+
+	param.ProcessPagination(int64(len(transactions)))
+
+	var latestLedger model.InspectorLedger
+
+	if err := r.db.WithContext(ctx).
+		InnerJoins("Inspector").
+		Where("inspector_id = ?", inspectorID).
+		Order("created_at desc").
+		Take(&latestLedger).Error; err != nil {
+		return inspectorLedgerResponse, err
+	}
+
+	inspectorLedgerResponse = model.InspectorLedgerResponse{
+		Account: model.InspectorLedgerAccount{
+			InspectorName:  latestLedger.Inspector.Name,
+			CurrentBalance: number.ConvertToRupiah(latestLedger.FinalBalance),
+		},
+		Transactions: transactions,
+	}
+
+	return inspectorLedgerResponse, nil
 }
