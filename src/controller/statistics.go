@@ -1,14 +1,16 @@
 package controller
 
 import (
-	"github.com/gin-gonic/gin"
-	"gorm.io/gorm"
+	"fmt"
 	"os"
 	"tigaputera-backend/sdk/auth"
 	errors "tigaputera-backend/sdk/error"
 	"tigaputera-backend/sdk/number"
 	"tigaputera-backend/src/model"
 	"time"
+
+	"github.com/gin-gonic/gin"
+	"gorm.io/gorm"
 )
 
 // @Summary Refresh Statistics
@@ -51,6 +53,7 @@ func (r *rest) RefreshStatistics(c *gin.Context) {
 
 	intervalMonths := []int{1, 3, 6, 12}
 
+	inspectorStats := []model.MqtInspectorStats{}
 	for _, intervalMonth := range intervalMonths {
 		startDate := time.Now().UTC().AddDate(0, -intervalMonth, 0)
 
@@ -100,7 +103,7 @@ func (r *rest) RefreshStatistics(c *gin.Context) {
 
 		margin := totalIncomeData - totalExpenditureData.Total
 
-		allInspectorStats := model.MqtInspectorStats{
+		allInspectorStat := model.MqtInspectorStats{
 			StartTime:                starDateUnix,
 			EndTime:                  endDateUnix,
 			IntervalMonth:            int64(intervalMonth),
@@ -120,11 +123,7 @@ func (r *rest) RefreshStatistics(c *gin.Context) {
 			Margin:                   &margin,
 		}
 
-		if err := tx.Create(&allInspectorStats).Error; err != nil {
-			tx.Rollback()
-			r.ErrorResponse(c, errors.InternalServerError(err.Error()))
-			return
-		}
+		inspectorStats = append(inspectorStats, allInspectorStat)
 
 		// insert each inspector stats
 		for _, user := range users {
@@ -151,7 +150,7 @@ func (r *rest) RefreshStatistics(c *gin.Context) {
 
 			margin := totalIncomeData - totalExpenditureData.Total
 
-			inspectorStats := model.MqtInspectorStats{
+			inspectorStat := model.MqtInspectorStats{
 				StartTime:                starDateUnix,
 				EndTime:                  endDateUnix,
 				IntervalMonth:            int64(intervalMonth),
@@ -171,12 +170,14 @@ func (r *rest) RefreshStatistics(c *gin.Context) {
 				Margin:                   &margin,
 			}
 
-			if err := tx.Create(&inspectorStats).Error; err != nil {
-				tx.Rollback()
-				r.ErrorResponse(c, errors.InternalServerError(err.Error()))
-				return
-			}
+			inspectorStats = append(inspectorStats, inspectorStat)
 		}
+	}
+
+	if err := tx.Create(&inspectorStats).Error; err != nil {
+		tx.Rollback()
+		r.ErrorResponse(c, errors.InternalServerError(err.Error()))
+		return
 	}
 
 	if err := tx.Commit().Error; err != nil {
@@ -338,9 +339,12 @@ func (r *rest) sumTotalIncome(
 		Model(&model.InspectorLedger{}).
 		Select("COALESCE(SUM(amount), 0) AS total").
 		Where(whereQuery, whereQueryArgs...).
+		Scan(&total).
 		Error; err != nil {
 		return 0, err
 	}
+
+	fmt.Printf("total income ID %d: %d\n\n", inspectorID, total)
 
 	return total, nil
 }
