@@ -1,16 +1,15 @@
 package controller
 
 import (
-	"fmt"
 	"os"
-	"tigaputera-backend/sdk/auth"
-	errors "tigaputera-backend/sdk/error"
-	"tigaputera-backend/sdk/number"
-	"tigaputera-backend/src/model"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
+	"tigaputera-backend/sdk/auth"
+	errors "tigaputera-backend/sdk/error"
+	"tigaputera-backend/sdk/number"
+	"tigaputera-backend/src/model"
 )
 
 // @Summary Refresh Statistics
@@ -154,7 +153,7 @@ func (r *rest) RefreshStatistics(c *gin.Context) {
 				StartTime:                starDateUnix,
 				EndTime:                  endDateUnix,
 				IntervalMonth:            int64(intervalMonth),
-				InspectorID:              &user.ID,
+				InspectorID:              &[]int64{user.ID}[0],
 				InspectorUsername:        user.Username,
 				TotalDrainageProject:     &projectCountData.Drainage,
 				TotalAshpaltProject:      &projectCountData.Ashpalt,
@@ -343,8 +342,6 @@ func (r *rest) sumTotalIncome(
 		Error; err != nil {
 		return 0, err
 	}
-
-	fmt.Printf("total income ID %d: %d\n\n", inspectorID, total)
 
 	return total, nil
 }
