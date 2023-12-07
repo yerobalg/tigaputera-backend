@@ -385,7 +385,11 @@ func (r *rest) GetUserStats(c *gin.Context) {
 
 	var userStats model.MqtInspectorStats
 	err := r.db.WithContext(ctx).
-		Where(&userStatsParam).
+		Where(
+			"inspector_id = ? AND start_time = ?", 
+			userStatsParam.InspectorID, 
+			userStatsParam.StartTime,
+		).
 		First(&userStats).Error
 
 	if r.isNoRecordFound(err) {
