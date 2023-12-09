@@ -2,11 +2,11 @@ package controller
 
 import (
 	"context"
+	"github.com/gin-gonic/gin"
 	"tigaputera-backend/sdk/auth"
 	errors "tigaputera-backend/sdk/error"
 	"tigaputera-backend/sdk/number"
 	"tigaputera-backend/src/model"
-	"github.com/gin-gonic/gin"
 
 	"time"
 )
@@ -139,9 +139,9 @@ func (r *rest) GetInspectorLedger(c *gin.Context) {
 	}
 
 	r.SuccessResponse(
-		c, 
-		"Berhasil mendapatkan buku kas pengawas", 
-		inspectorLedgerResponse, 
+		c,
+		"Berhasil mendapatkan buku kas pengawas",
+		inspectorLedgerResponse,
 		&param.PaginationParam,
 	)
 }
@@ -196,20 +196,12 @@ func (r *rest) getAllInspectorLedger(
 
 	var finalBalance int64
 
-	if err := r.db.WithContext(ctx).Raw(`
-		SELECT
-			SUM(IL.final_balance) AS final_balance
-		FROM inspector_ledgers IL
-		INNER JOIN (
-			SELECT
-				inspector_id,
-				MAX(created_at) AS created_at
-			FROM inspector_ledgers
-			GROUP BY 1
-		) AS IL2 ON IL.inspector_id = IL2.inspector_id 
-			AND IL.created_at = IL2.created_at
-			AND IL.deleted_at IS NULL
-	`).Scan(&finalBalance).Error; err != nil {
+	if err := r.db.WithContext(ctx).
+		Model(&model.MqtInspectorStats{}).
+		Select("margin AS final_balance").
+		Where("interval_month = 1 AND inspector_id = 0").
+		Limit(1).
+		Scan(&finalBalance).Error; err != nil {
 		return inspectorLedgerResponse, err
 	}
 
@@ -278,7 +270,7 @@ func (r *rest) getSingleInspectorLedger(
 		InnerJoins("Inspector").
 		Where("inspector_id = ?", inspectorID).
 		Order("created_at desc").
-		Take(&latestLedger).Error; err != nil {
+		Take(&latestLedger).Error; !r.isNoRecordFound(err) {
 		return inspectorLedgerResponse, err
 	}
 

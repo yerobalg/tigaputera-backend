@@ -366,18 +366,6 @@ func (r *rest) GetUserStats(c *gin.Context) {
 		userStatsParam.InspectorID = 0
 	}
 
-	lastMonth := time.Now().UTC().AddDate(0, -1, 0)
-	userStatsParam.StartTime = time.Date(
-		lastMonth.Year(),
-		lastMonth.Month(),
-		lastMonth.Day(),
-		0,
-		0,
-		0,
-		0,
-		lastMonth.Location(),
-	).Unix()
-
 	var totalProject int64
 	var totalExpenditure int64
 	var totalIncome int64
@@ -386,11 +374,10 @@ func (r *rest) GetUserStats(c *gin.Context) {
 	var userStats model.MqtInspectorStats
 	err := r.db.WithContext(ctx).
 		Where(
-			"inspector_id = ? AND start_time = ?", 
-			userStatsParam.InspectorID, 
-			userStatsParam.StartTime,
+			"inspector_id = ? AND interval_month = 1",
+			userStatsParam.InspectorID,
 		).
-		First(&userStats).Error
+		Take(&userStats).Error
 
 	if r.isNoRecordFound(err) {
 		totalProject = 0
@@ -447,24 +434,12 @@ func (r *rest) GetUserStatsDetail(c *gin.Context) {
 		intervalMonth = 1
 	}
 
-	beginMonth := time.Now().UTC().AddDate(0, -intervalMonth, 0)
-	userStatsParam.StartTime = time.Date(
-		beginMonth.Year(),
-		beginMonth.Month(),
-		beginMonth.Day(),
-		0,
-		0,
-		0,
-		0,
-		beginMonth.Location(),
-	).Unix()
-
 	var userStats model.MqtInspectorStats
 	err := r.db.WithContext(ctx).
 		Where(
-			"inspector_id = ? AND start_time = ?",
+			"inspector_id = ? AND interval_month = ?",
 			userStatsParam.InspectorID,
-			userStatsParam.StartTime,
+			intervalMonth,
 		).
 		Take(&userStats).Error
 
