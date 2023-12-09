@@ -176,10 +176,11 @@ func (r *rest) getAllInspectorLedger(
 		}
 
 		transaction := model.InspectorLedgerTransaction{
-			Timestamp: ledger.CreatedAt,
-			Type:      string(ledger.LedgerType),
-			RefName:   ledger.Inspector.Name,
-			Amount:    number.ConvertToRupiah(ledger.Amount),
+			Timestamp:     ledger.CreatedAt,
+			Type:          string(ledger.LedgerType),
+			RefName:       ledger.Inspector.Name,
+			Amount:        number.ConvertToRupiah(ledger.Amount),
+			InspectorName: ledger.Inspector.Name,
 		}
 
 		transactions = append(transactions, transaction)
