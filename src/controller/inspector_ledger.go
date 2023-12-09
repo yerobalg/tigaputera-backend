@@ -266,11 +266,12 @@ func (r *rest) getSingleInspectorLedger(
 
 	var latestLedger model.InspectorLedger
 
-	if err := r.db.WithContext(ctx).
+	err = r.db.WithContext(ctx).
 		InnerJoins("Inspector").
 		Where("inspector_id = ?", inspectorID).
 		Order("created_at desc").
-		Take(&latestLedger).Error; !r.isNoRecordFound(err) {
+		Take(&latestLedger).Error
+	if err != nil && !r.isNoRecordFound(err) {
 		return inspectorLedgerResponse, err
 	}
 
