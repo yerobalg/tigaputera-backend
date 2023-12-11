@@ -17,8 +17,8 @@ import (
 // @Tags Project Expenditure Detail
 // @Produce json
 // @Security BearerAuth
-// @Param project_id path  int true "project_id"
-// @Param expenditure_id path  int true "expenditure_id"
+// @Param project_id path int true "project_id"
+// @Param expenditure_id path int true "expenditure_id"
 // @Param name formData string true "name"
 // @Param price formData int64 true "price"
 // @Param amount formData int64 true "amount"
@@ -181,8 +181,8 @@ func (r *rest) CreateProjectExpenditureDetail(c *gin.Context) {
 // @Tags Project Expenditure Detail
 // @Produce json
 // @Security BearerAuth
-// @Param project_id path  int true "project_id"
-// @Param expenditure_id path  int true "expenditure_id"
+// @Param project_id path int true "project_id"
+// @Param expenditure_id path int true "expenditure_id"
 // @Success 200 {object} model.HTTPResponse{data=model.ExpenditureDetailListResponse}
 // @Failure 401 {object} model.HTTPResponse{}
 // @Failure 404 {object} model.HTTPResponse{}
@@ -268,9 +268,9 @@ func (r *rest) GetProjectExpenditureDetailList(c *gin.Context) {
 // @Tags Project Expenditure Detail
 // @Produce json
 // @Security BearerAuth
-// @Param project_id path  int true "project_id"
-// @Param expenditure_id path  int true "expenditure_id"
-// @Param expenditure_detail_id path  int true "expenditure_detail_id"
+// @Param project_id path int true "project_id"
+// @Param expenditure_id path int true "expenditure_id"
+// @Param expenditure_detail_id path int true "expenditure_detail_id"
 // @Success 200 {object} model.HTTPResponse{}
 // @Failure 401 {object} model.HTTPResponse{}
 // @Failure 404 {object} model.HTTPResponse{}

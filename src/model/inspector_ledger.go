@@ -40,8 +40,8 @@ type InspectorLedgerParam struct {
 }
 
 type CreateInspectorIncomeBody struct {
-	Amount int64  `json:"amount" binding:"required"`
-	Ref    string `json:"ref" binding:"required"`
+	Amount int64  `json:"amount" form:"amount" validate:"required"`
+	Ref    string `json:"ref" form:"ref" validate:"required"`
 }
 
 type InspectorLedgerResponse struct {

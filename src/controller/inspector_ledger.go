@@ -5,10 +5,12 @@ import (
 	"github.com/gin-gonic/gin"
 	"tigaputera-backend/sdk/auth"
 	errors "tigaputera-backend/sdk/error"
+	"tigaputera-backend/sdk/file"
 	"tigaputera-backend/sdk/number"
 	"tigaputera-backend/src/model"
 
 	"time"
+	"fmt"
 )
 
 // @Summary Create Inspector Income
@@ -16,7 +18,10 @@ import (
 // @Tags Inspector Ledger
 // @Produce json
 // @Security BearerAuth
-// @Param createInspectorIncomeBody body model.CreateInspectorIncomeBody true "body"
+// @Param amount formData int64 true "amount"
+// @Param ref formData string true "ref"
+// @Param receiptImage formData file true "receiptImage"
+// @Accept multipart/form-data
 // @Success 201 {object} model.HTTPResponse{}
 // @Failure 400 {object} model.HTTPResponse{}
 // @Failure 401 {object} model.HTTPResponse{}
@@ -36,10 +41,23 @@ func (r *rest) CreateInspectorIncome(c *gin.Context) {
 		return
 	}
 
+	recieptImage, err := file.Init(c, "receiptImage")
+	if err != nil {
+		r.ErrorResponse(c, errors.BadRequest("Gambar bukti tidak ditemukan"))
+		return
+	}
+
+	if !recieptImage.IsImage() {
+		r.ErrorResponse(
+			c,
+			errors.BadRequest("Gambar bukti harus berupa png, jpg, atau jpeg"))
+		return
+	}
+
 	var latestLedger model.InspectorLedger
 	user := auth.GetUser(ctx)
 	var previousBalance int64
-	err := r.db.WithContext(ctx).
+	err = r.db.WithContext(ctx).
 		Where("inspector_id = ?", user.ID).
 		Order("created_at desc").
 		Take(&latestLedger).Error
@@ -53,6 +71,23 @@ func (r *rest) CreateInspectorIncome(c *gin.Context) {
 		previousBalance = latestLedger.FinalBalance
 	}
 
+	now := time.Now().Unix()
+	recieptImage.SetFileName(fmt.Sprintf(
+		"%s_%d", // username_timestamp
+		user.Username,
+		now,
+	))
+
+	recieptURL, err := r.storage.Upload(
+		ctx,
+		recieptImage,
+		"incomes",
+	)
+	if err != nil {
+		r.ErrorResponse(c, errors.InternalServerError(err.Error()))
+		return
+	}
+
 	newLedger := model.InspectorLedger{
 		InspectorID:    user.ID,
 		LedgerType:     model.Debit,
@@ -60,6 +95,7 @@ func (r *rest) CreateInspectorIncome(c *gin.Context) {
 		Amount:         createInspectorIncomeBody.Amount,
 		CurrentBalance: previousBalance,
 		FinalBalance:   previousBalance + createInspectorIncomeBody.Amount,
+		ReceiptURL:     recieptURL,
 	}
 
 	if err := r.db.WithContext(ctx).Create(&newLedger).Error; err != nil {
