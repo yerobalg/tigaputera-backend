@@ -39,6 +39,11 @@ type Interface interface {
 }
 
 func Init(serviceAccount GCPServiceAccount, bucketName string) Interface {
+	serviceAccount.PrivateKey = fmt.Sprintf(
+		"-----BEGIN PRIVATE KEY-----\n%s\n-----END PRIVATE KEY-----\n",
+		serviceAccount.PrivateKey,
+	)
+	
 	serviceAccountJson, err := json.Marshal(serviceAccount)
 	if err != nil {
 		panic(err)
