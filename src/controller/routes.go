@@ -1,6 +1,18 @@
 package controller
 
 import (
+	"github.com/gin-gonic/gin"
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
+	swagger "tigaputera-backend/docs"
+	"tigaputera-backend/sdk/jwt"
+	"tigaputera-backend/sdk/log"
+	"tigaputera-backend/sdk/password"
+	"tigaputera-backend/sdk/storage"
+	"tigaputera-backend/sdk/validator"
+	"tigaputera-backend/src/database"
+	"tigaputera-backend/src/model"
+
 	"context"
 	"fmt"
 	"net/http"
@@ -9,17 +21,6 @@ import (
 	"sync"
 	"syscall"
 	"time"
-
-	"github.com/gin-gonic/gin"
-	swaggerFiles "github.com/swaggo/files"
-	ginSwagger "github.com/swaggo/gin-swagger"
-	swagger "tigaputera-backend/docs"
-	"tigaputera-backend/sdk/jwt"
-	"tigaputera-backend/sdk/log"
-	"tigaputera-backend/sdk/password"
-	"tigaputera-backend/sdk/validator"
-	"tigaputera-backend/src/database"
-	"tigaputera-backend/src/model"
 )
 
 var once = sync.Once{}
@@ -31,6 +32,7 @@ type rest struct {
 	jwt       jwt.Interface
 	password  password.Interface
 	validator validator.Interface
+	storage   storage.Interface
 }
 
 func Init(
@@ -39,6 +41,7 @@ func Init(
 	jwt jwt.Interface,
 	password password.Interface,
 	validator validator.Interface,
+	storage storage.Interface,
 ) *rest {
 	r := &rest{}
 
@@ -52,6 +55,7 @@ func Init(
 		r.jwt = jwt
 		r.password = password
 		r.validator = validator
+		r.storage = storage
 
 		r.RegisterMiddlewareAndRoutes()
 	})
