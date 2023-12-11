@@ -7,6 +7,7 @@ import (
 
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/url"
 )
@@ -32,8 +33,8 @@ type storageLib struct {
 }
 
 type Interface interface {
-	Upload(ctx context.Context, file *file.File, path string, filename string) (string, error)
-	Delete(ctx context.Context, path string, filename string) error
+	Upload(ctx context.Context, file *file.File, path string) (string, error)
+	Delete(ctx context.Context, path string, fileName string) error
 	getObjectPlace(objectPath string) *storage.ObjectHandle
 }
 
@@ -63,11 +64,10 @@ func (s *storageLib) getObjectPlace(objectPath string) *storage.ObjectHandle {
 func (s *storageLib) Upload(
 	ctx context.Context,
 	file *file.File,
-	filename string,
 	path string,
 ) (string, error) {
 	var imageURL string
-	writer := s.getObjectPlace(path + "/" + filename).NewWriter(ctx)
+	writer := s.getObjectPlace(path + "/" + file.Meta.Filename).NewWriter(ctx)
 
 	if _, err := io.Copy(writer, file.Content); err != nil {
 		return imageURL, err
@@ -77,12 +77,17 @@ func (s *storageLib) Upload(
 		return imageURL, err
 	}
 
-	parsedURL, err := url.Parse(writer.Attrs().MediaLink)
+	parsedURL, err := url.Parse(fmt.Sprintf(
+		"https://storage.googleapis.com/%s/%s/%s",
+		s.BucketName,
+		path,
+		file.Meta.Filename,
+	))
 	if err != nil {
 		return imageURL, err
 	}
 
-	imageURL = parsedURL.Scheme + "://" + parsedURL.Host + parsedURL.Path
+	imageURL = parsedURL.String()
 
 	return imageURL, nil
 }

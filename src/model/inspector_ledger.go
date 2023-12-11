@@ -27,6 +27,7 @@ type InspectorLedger struct {
 	Amount         int64      `gorm:"not null" json:"amount"`
 	CurrentBalance int64      `gorm:"default:0" json:"currentBalance"`
 	FinalBalance   int64      `gorm:"default:0" json:"finalBalance"`
+	ReceiptURL     string     `gorm:"type:varchar(255);default:''" json:"receiptUrl"`
 	IsCanceled     *bool      `gorm:"default:false" json:"isCanceled"`
 	Inspector      User       `gorm:"foreignKey:InspectorID" json:"inspector"`
 }

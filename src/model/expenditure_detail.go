@@ -27,9 +27,9 @@ type ExpenditureDetail struct {
 }
 
 type CreateExpenditureDetailBody struct {
-	Name   string `json:"name" validate:"required"`
-	Price  int64  `json:"price" validate:"required"`
-	Amount int64  `json:"amount" validate:"required"`
+	Name   string `json:"name" form:"name" validate:"required"`
+	Price  int64  `json:"price" form:"price" validate:"required"`
+	Amount int64  `json:"amount" form:"amount" validate:"required"`
 }
 
 type ExpenditureDetailParam struct {

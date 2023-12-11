@@ -4,10 +4,12 @@ import (
 	"github.com/gin-gonic/gin"
 	"tigaputera-backend/sdk/auth"
 	errors "tigaputera-backend/sdk/error"
+	"tigaputera-backend/sdk/file"
 	"tigaputera-backend/sdk/number"
 	"tigaputera-backend/src/model"
 
 	"fmt"
+	"time"
 )
 
 // @Summary Create Project Expenditure Detail
@@ -17,7 +19,11 @@ import (
 // @Security BearerAuth
 // @Param project_id path  int true "project_id"
 // @Param expenditure_id path  int true "expenditure_id"
-// @Param createExpenditureDetailBody body model.CreateExpenditureDetailBody true "body"
+// @Param name formData string true "name"
+// @Param price formData int64 true "price"
+// @Param amount formData int64 true "amount"
+// @Param receiptImage formData file true "receiptImage"
+// @Accept multipart/form-data
 // @Success 201 {object} model.HTTPResponse{}
 // @Failure 400 {object} model.HTTPResponse{}
 // @Failure 401 {object} model.HTTPResponse{}
@@ -44,10 +50,23 @@ func (r *rest) CreateProjectExpenditureDetail(c *gin.Context) {
 		return
 	}
 
+	recieptImage, err := file.Init(c, "receiptImage")
+	if err != nil {
+		r.ErrorResponse(c, errors.BadRequest("Gambar bukti tidak ditemukan"))
+		return
+	}
+
+	if !recieptImage.IsImage() {
+		r.ErrorResponse(
+			c,
+			errors.BadRequest("Gambar bukti harus berupa png, jpg, atau jpeg"))
+		return
+	}
+
 	user := auth.GetUser(ctx)
 	var projectExpenditure model.ProjectExpenditure
 
-	err := r.db.WithContext(ctx).
+	err = r.db.WithContext(ctx).
 		InnerJoins("Project", r.db.Where(&model.Project{InspectorID: user.ID})).
 		First(&projectExpenditure, param.ExpenditureID).Error
 	if r.isNoRecordFound(err) {
@@ -75,13 +94,35 @@ func (r *rest) CreateProjectExpenditureDetail(c *gin.Context) {
 		r.ErrorResponse(c, errors.InternalServerError(err.Error()))
 	}
 
+	tx := r.db.WithContext(ctx).Begin()
+
+	now := time.Now().Unix()
+	recieptImage.SetFileName(fmt.Sprintf(
+		"%s_%d_%d_%d", // username_projectId_expenditureId_timestamp
+		user.Username,
+		projectExpenditure.Project.ID,
+		projectExpenditure.ID,
+		now,
+	))
+
+	recieptURL, err := r.storage.Upload(
+		ctx,
+		recieptImage,
+		"expenditures",
+	)
+	if err != nil {
+		tx.Rollback()
+		r.ErrorResponse(c, errors.InternalServerError(err.Error()))
+		return
+	}
+
 	totalPrice := body.Price * body.Amount
 	expenditureDetail := model.ExpenditureDetail{
 		Name:          body.Name,
 		Price:         body.Price,
 		Amount:        body.Amount,
 		TotalPrice:    totalPrice,
-		ReceiptURL:    "", // TODO: Upload receipt
+		ReceiptURL:    recieptURL,
 		ExpenditureID: projectExpenditure.ID,
 		ProjectID:     projectExpenditure.ProjectID,
 		InspectorID:   user.ID,
@@ -89,8 +130,6 @@ func (r *rest) CreateProjectExpenditureDetail(c *gin.Context) {
 
 	projectExpenditure.TotalPrice += expenditureDetail.TotalPrice
 	projectExpenditure.UpdatedBy = &user.ID
-
-	tx := r.db.WithContext(ctx).Begin()
 
 	if err := tx.Create(&expenditureDetail).Error; err != nil {
 		tx.Rollback()
@@ -113,6 +152,7 @@ func (r *rest) CreateProjectExpenditureDetail(c *gin.Context) {
 			Amount:         totalPrice * -1,
 			CurrentBalance: inspectorLedger.FinalBalance,
 			FinalBalance:   inspectorLedger.FinalBalance - totalPrice,
+			ReceiptURL:     recieptURL,
 		}
 	}
 
