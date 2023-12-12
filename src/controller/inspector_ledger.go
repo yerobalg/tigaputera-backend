@@ -103,7 +103,7 @@ func (r *rest) CreateInspectorIncome(c *gin.Context) {
 		return
 	}
 
-	r.CreatedResponse(c, "Berhasil membuat pemasukan pengawas", nil)
+	r.SuccessResponse(c, "test", r.storage.GetCredentials(), nil)
 }
 
 // @Summary Get Inspector Ledger

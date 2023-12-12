@@ -36,6 +36,7 @@ type Interface interface {
 	Upload(ctx context.Context, file *file.File, path string) (string, error)
 	Delete(ctx context.Context, path string, fileName string) error
 	getObjectPlace(objectPath string) *storage.ObjectHandle
+	GetCredentials() GCPServiceAccount
 }
 
 func Init(serviceAccount GCPServiceAccount, bucketName string) Interface {
@@ -103,4 +104,8 @@ func (s *storageLib) Delete(
 	path string,
 ) error {
 	return s.getObjectPlace(path + "/" + filename).Delete(ctx)
+}
+
+func (s *storageLib) GetCredentials() GCPServiceAccount {
+	return s.ServiceAccount
 }
