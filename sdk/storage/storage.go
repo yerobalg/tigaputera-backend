@@ -6,7 +6,6 @@ import (
 	"tigaputera-backend/sdk/file"
 
 	"context"
-	"encoding/json"
 	"fmt"
 	"io"
 	"net/url"
@@ -39,18 +38,8 @@ type Interface interface {
 }
 
 func Init(serviceAccount GCPServiceAccount, bucketName string) Interface {
-	serviceAccount.PrivateKey = fmt.Sprintf(
-		"-----BEGIN PRIVATE KEY-----\n%s\n-----END PRIVATE KEY-----\n",
-		serviceAccount.PrivateKey,
-	)
-	
-	serviceAccountJson, err := json.Marshal(serviceAccount)
-	if err != nil {
-		panic(err)
-	}
-
 	ctx := context.Background()
-	client, err := storage.NewClient(ctx, option.WithCredentialsJSON(serviceAccountJson))
+	client, err := storage.NewClient(ctx, option.WithCredentialsFile("gcp-service-account.json"))
 	if err != nil {
 		panic(err)
 	}
