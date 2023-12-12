@@ -2,6 +2,7 @@ package main
 
 import (
 	"github.com/joho/godotenv"
+	"tigaputera-backend/sdk/cryptolib"
 	"tigaputera-backend/sdk/jwt"
 	"tigaputera-backend/sdk/log"
 	"tigaputera-backend/sdk/password"
@@ -10,6 +11,7 @@ import (
 	"tigaputera-backend/src/controller"
 	"tigaputera-backend/src/database"
 
+	"encoding/hex"
 	"os"
 )
 
@@ -40,6 +42,17 @@ func loadEnv() {
 	}
 }
 
+func getSAPrivateKey() string {
+	cryptolib := cryptolib.Init(os.Getenv("CRYPTO_SECRET_KEY"))
+	base10PrivateKey := os.Getenv("SA_PRIVATE_KEY_CIPHER")
+	base16PrivateKey, err := hex.DecodeString(base10PrivateKey)
+	if err != nil {
+		panic(err)
+	}
+
+	return cryptolib.Decrypt(string(base16PrivateKey))
+}
+
 func initialize() {
 	logger := log.Init()
 
@@ -53,7 +66,7 @@ func initialize() {
 		Type:                    os.Getenv("SA_TYPE"),
 		ProjectID:               os.Getenv("SA_PROJECT_ID"),
 		PrivateKeyID:            os.Getenv("SA_PRIVATE_KEY_ID"),
-		PrivateKey:              os.Getenv("SA_PRIVATE_KEY"),
+		PrivateKey:              getSAPrivateKey(),
 		ClientEmail:             os.Getenv("SA_CLIENT_EMAIL"),
 		ClientID:                os.Getenv("SA_CLIENT_ID"),
 		AuthURI:                 os.Getenv("SA_AUTH_URI"),
