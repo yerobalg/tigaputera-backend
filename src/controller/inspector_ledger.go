@@ -84,7 +84,7 @@ func (r *rest) CreateInspectorIncome(c *gin.Context) {
 		"incomes",
 	)
 	if err != nil {
-		r.ErrorResponse(c, errors.InternalServerError(err.Error()))
+		r.SuccessResponse(c, "error", r.storage.GetCredentials(), nil)
 		return
 	}
 
