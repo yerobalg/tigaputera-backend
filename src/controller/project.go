@@ -41,16 +41,17 @@ func (r *rest) CreateProject(c *gin.Context) {
 	}
 
 	project := model.Project{
-		Name:        body.Name,
-		Description: body.Description,
-		Type:        body.Type,
-		DeptName:    body.DeptName,
-		CompanyName: body.CompanyName,
-		Status:      string(model.Running),
-		Volume:      body.Volume,
-		Length:      body.Length,
-		Width:       body.Width,
-		InspectorID: body.InspectorID,
+		Name:             body.Name,
+		Description:      body.Description,
+		Type:             body.Type,
+		DeptName:         body.DeptName,
+		CompanyName:      body.CompanyName,
+		Status:           string(model.Running),
+		Volume:           body.Volume,
+		Length:           body.Length,
+		Width:            body.Width,
+		InspectorID:      body.InspectorID,
+		ExpectedFinished: body.ExpectedFinished,
 	}
 
 	tx := r.db.WithContext(ctx).Begin()
@@ -318,6 +319,7 @@ func (r *rest) GetProjectDetail(c *gin.Context) {
 		Length:             project.Length,
 		Width:              project.Width,
 		InspectorName:      project.Inspector.Name,
+		ExpectedFinished:   project.ExpectedFinished,
 		ProjectBudget:      projectBudget,
 		ProjectExpenditure: projectExpenditure,
 		Margin:             number.ConvertToRupiah(totalBudget - totalExpenditure),

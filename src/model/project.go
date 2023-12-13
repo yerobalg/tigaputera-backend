@@ -43,20 +43,21 @@ type Project struct {
 	UpdatedBy *int64         `json:"updatedBy"`
 	DeletedBy *int64         `json:"deletedBy"`
 
-	Name        string  `gorm:"not null;unique;type:varchar(255)" json:"name"`
-	Description string  `gorm:"not null;type:varchar(255)" json:"description"`
-	Type        string  `gorm:"not null;type:varchar(255)" json:"type"`
-	DeptName    string  `gorm:"not null;type:varchar(255)" json:"deptName"`
-	CompanyName string  `gorm:"not null;type:varchar(255)" json:"companyName"`
-	Status      string  `gorm:"not null;type:varchar(255)" json:"status"`
-	Budget      int64   `gorm:"default:0" json:"budget"`
-	PPN         float64 `gorm:"default:0.11" json:"ppn"`
-	PPH         float64 `gorm:"default:0.015" json:"pph"`
-	Volume      *int64  `json:"volume"`
-	Length      *int64  `json:"length"`
-	Width       *int64  `json:"width"`
-	InspectorID int64   `json:"inspectorId"`
-	Inspector   User    `gorm:"foreignKey:InspectorID" json:"inspector"`
+	Name             string  `gorm:"not null;unique;type:varchar(255)" json:"name"`
+	Description      string  `gorm:"not null;type:varchar(255)" json:"description"`
+	Type             string  `gorm:"not null;type:varchar(255)" json:"type"`
+	DeptName         string  `gorm:"not null;type:varchar(255)" json:"deptName"`
+	CompanyName      string  `gorm:"not null;type:varchar(255)" json:"companyName"`
+	Status           string  `gorm:"not null;type:varchar(255)" json:"status"`
+	Budget           int64   `gorm:"default:0" json:"budget"`
+	ExpectedFinished int64   `gorm:"default 0" json:"expectedFinished"`
+	PPN              float64 `gorm:"default:0.11" json:"ppn"`
+	PPH              float64 `gorm:"default:0.015" json:"pph"`
+	Volume           *int64  `json:"volume"`
+	Length           *int64  `json:"length"`
+	Width            *int64  `json:"width"`
+	InspectorID      int64   `json:"inspectorId"`
+	Inspector        User    `gorm:"foreignKey:InspectorID" json:"inspector"`
 }
 
 type ProjectParam struct {
@@ -65,15 +66,16 @@ type ProjectParam struct {
 }
 
 type CreateProjectBody struct {
-	Name        string `json:"name" validate:"required"`
-	Description string `json:"description" validate:"required"`
-	Type        string `json:"type" validate:"required"`
-	DeptName    string `json:"deptName" validate:"required"`
-	CompanyName string `json:"companyName" validate:"required"`
-	InspectorID int64  `json:"inspectorId" validate:"required"`
-	Volume      *int64 `json:"volume"`
-	Length      *int64 `json:"length"`
-	Width       *int64 `json:"width"`
+	Name             string `json:"name" validate:"required"`
+	Description      string `json:"description" validate:"required"`
+	Type             string `json:"type" validate:"required"`
+	DeptName         string `json:"deptName" validate:"required"`
+	CompanyName      string `json:"companyName" validate:"required"`
+	InspectorID      int64  `json:"inspectorId" validate:"required"`
+	ExpectedFinished int64  `json:"expectedFinished" validate:"required"`
+	Volume           *int64 `json:"volume"`
+	Length           *int64 `json:"length"`
+	Width            *int64 `json:"width"`
 }
 
 type ProjectListResponse struct {
@@ -100,6 +102,7 @@ type ProjectDetailResponse struct {
 	ProjectBudget      ProjectBudget              `json:"projectBudget"`
 	ProjectExpenditure ProjectExpenditureResponse `json:"projectExpenditure"`
 	Margin             string                     `json:"margin"`
+	ExpectedFinished   int64                      `json:"expectedFinished"`
 }
 
 type ProjectBudget struct {
