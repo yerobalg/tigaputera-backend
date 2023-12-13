@@ -245,6 +245,7 @@ func (r *rest) GetProjectExpenditureDetailList(c *gin.Context) {
 			Price:      number.ConvertToRupiah(expenditureDetail.Price),
 			Amount:     expenditureDetail.Amount,
 			TotalPrice: number.ConvertToRupiah(expenditureDetail.TotalPrice),
+			ReceiptURL: expenditureDetail.ReceiptURL,
 		}
 
 		expenditureDetails = append(expenditureDetails, expenditureDetailRes)

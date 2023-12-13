@@ -46,6 +46,7 @@ type ExpenditureDetailList struct {
 	Price      string `json:"price"`
 	Amount     int64  `json:"amount"`
 	TotalPrice string `json:"totalPrice"`
+	ReceiptURL string `json:"receiptUrl"`
 }
 
 type ExpenditureDetailListResponse struct {
