@@ -217,6 +217,7 @@ func (r *rest) getAllInspectorLedger(
 			RefName:       ledger.Inspector.Name,
 			Amount:        number.ConvertToRupiah(ledger.Amount),
 			InspectorName: ledger.Inspector.Name,
+			RecieptURL:    ledger.ReceiptURL,
 		}
 
 		transactions = append(transactions, transaction)
