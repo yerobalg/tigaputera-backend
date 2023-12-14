@@ -214,7 +214,7 @@ func (r *rest) getAllInspectorLedger(
 		transaction := model.InspectorLedgerTransaction{
 			Timestamp:     ledger.CreatedAt,
 			Type:          string(ledger.LedgerType),
-			RefName:       ledger.Inspector.Name,
+			RefName:       ledger.Ref,
 			Amount:        number.ConvertToRupiah(ledger.Amount),
 			InspectorName: ledger.Inspector.Name,
 			RecieptURL:    ledger.ReceiptURL,
