@@ -2,7 +2,6 @@ package controller
 
 import (
 	"github.com/gin-gonic/gin"
-	"tigaputera-backend/sdk/auth"
 	errors "tigaputera-backend/sdk/error"
 	"tigaputera-backend/src/model"
 )
@@ -40,16 +39,10 @@ func (r *rest) CreateProjectExpenditure(c *gin.Context) {
 		return
 	}
 
-	user := auth.GetUser(ctx)
-
 	// Get latest sequence
 	var latestProjectExpenditure model.ProjectExpenditure
 	err := r.db.WithContext(ctx).
-		Where("project_expenditures.project_id = ?", param.ProjectID).
-		InnerJoins(
-			"Project",
-			r.db.Where(&model.Project{InspectorID: user.ID}),
-		).
+		Where("project_id = ?", param.ProjectID).
 		Order("sequence desc").
 		Take(&latestProjectExpenditure).Error
 

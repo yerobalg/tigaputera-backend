@@ -139,6 +139,7 @@ func (r *rest) RegisterMiddlewareAndRoutes() {
 		)
 		v1.POST(
 			"project/:project_id/expenditure/:expenditure_id/detail",
+			r.AuthorizeRole(model.Admin),
 			r.CreateProjectExpenditureDetail,
 		)
 		v1.GET(
