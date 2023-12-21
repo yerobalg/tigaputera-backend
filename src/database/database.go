@@ -63,6 +63,7 @@ func (db *DB) Migrate() error {
 		&model.ProjectExpenditure{},
 		&model.Ledger{},
 		&model.MqtInspectorStats{},
+		&model.MqtProjectStats{},
 	)
 }
 
