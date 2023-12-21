@@ -335,7 +335,7 @@ func (r *rest) sumTotalIncome(
 
 	var total int64
 	if err := tx.
-		Model(&model.InspectorLedger{}).
+		Model(&model.Ledger{}).
 		Select("COALESCE(SUM(amount), 0) AS total").
 		Where(whereQuery, whereQueryArgs...).
 		Scan(&total).

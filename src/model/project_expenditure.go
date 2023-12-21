@@ -14,7 +14,7 @@ type ProjectExpenditure struct {
 	ProjectID   int64   `json:"projectId" gorm:"index:idx_project_expenditure,unique"`
 	Sequence    int64   `gorm:"not null;index:idx_project_expenditure,unique" json:"sequence"`
 	Name        string  `gorm:"not null;type:varchar(255)" json:"name"`
-	TotalPrice  int64   `gorm:"default:0" json:"totalPrice"`
+	TotalPrice  *int64  `gorm:"default:0" json:"totalPrice"`
 	IsFixedCost *bool   `gorm:"default:true" json:"isFixedCost"`
 	Project     Project `gorm:"foreignKey:ProjectID" json:"project"`
 }

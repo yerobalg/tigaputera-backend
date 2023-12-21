@@ -51,7 +51,8 @@ func (r *rest) CreateProject(c *gin.Context) {
 		Length:           body.Length,
 		Width:            body.Width,
 		InspectorID:      body.InspectorID,
-		ExpectedFinished: body.ExpectedFinished,
+		StartDate:        body.StartDate,
+		FinalDate:        body.FinalDate,
 	}
 
 	tx := r.db.WithContext(ctx).Begin()
@@ -243,15 +244,15 @@ func (r *rest) GetProjectDetail(c *gin.Context) {
 		return
 	}
 
-	ppnPrice := int64(float64(project.Budget) * project.PPN * -1)
-	pphPrice := int64(float64(project.Budget) * project.PPH * -1)
-	totalBudget := project.Budget + ppnPrice + pphPrice
+	ppnPrice := int64(float64(*project.Budget) * project.PPN * -1)
+	pphPrice := int64(float64(*project.Budget) * project.PPH * -1)
+	totalBudget := *project.Budget + ppnPrice + pphPrice
 
 	projectBudget := model.ProjectBudget{
 		Budgets: []model.Budget{
 			{
 				Name:  "Pagu Pekerjaan",
-				Price: number.ConvertToRupiah(project.Budget),
+				Price: number.ConvertToRupiah(*project.Budget),
 			},
 			{
 				Name:  "PPN",
@@ -297,11 +298,11 @@ func (r *rest) GetProjectDetail(c *gin.Context) {
 			ID:          expenditure.ID,
 			Sequence:    expenditure.Sequence,
 			Name:        expenditure.Name,
-			TotalPrice:  number.ConvertToRupiah(expenditure.TotalPrice),
+			TotalPrice:  number.ConvertToRupiah(*expenditure.TotalPrice),
 			IsFixedCost: *expenditure.IsFixedCost,
 		})
 
-		totalExpenditure += expenditure.TotalPrice
+		totalExpenditure += *expenditure.TotalPrice
 	}
 
 	projectExpenditure.Expenditures = expenditures
@@ -319,7 +320,8 @@ func (r *rest) GetProjectDetail(c *gin.Context) {
 		Length:             project.Length,
 		Width:              project.Width,
 		InspectorName:      project.Inspector.Name,
-		ExpectedFinished:   project.ExpectedFinished,
+		StartDate:          project.StartDate,
+		FinalDate:          project.FinalDate,
 		ProjectBudget:      projectBudget,
 		ProjectExpenditure: projectExpenditure,
 		Margin:             number.ConvertToRupiah(totalBudget - totalExpenditure),
@@ -362,7 +364,7 @@ func (r *rest) UpdateProjectBudget(c *gin.Context) {
 	}
 
 	updatedProject := model.Project{
-		Budget: body.Budget,
+		Budget: &body.Budget,
 		PPN:    body.PPN,
 		PPH:    body.PPH,
 	}

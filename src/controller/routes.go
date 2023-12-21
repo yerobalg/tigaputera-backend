@@ -1,9 +1,6 @@
 package controller
 
 import (
-	"github.com/gin-gonic/gin"
-	swaggerFiles "github.com/swaggo/files"
-	ginSwagger "github.com/swaggo/gin-swagger"
 	swagger "tigaputera-backend/docs"
 	"tigaputera-backend/sdk/jwt"
 	"tigaputera-backend/sdk/log"
@@ -12,6 +9,10 @@ import (
 	"tigaputera-backend/sdk/validator"
 	"tigaputera-backend/src/database"
 	"tigaputera-backend/src/model"
+
+	"github.com/gin-gonic/gin"
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
 
 	"context"
 	"fmt"
@@ -103,11 +104,6 @@ func (r *rest) RegisterMiddlewareAndRoutes() {
 			r.AuthorizeRole(model.Admin),
 			r.DeactiveInspector,
 		)
-		v1.POST(
-			"user/inspector/income",
-			r.AuthorizeRole(model.Inspector),
-			r.CreateInspectorIncome,
-		)
 		v1.GET(
 			"user/inspector/ledger",
 			r.GetInspectorLedger,
@@ -134,21 +130,21 @@ func (r *rest) RegisterMiddlewareAndRoutes() {
 			r.UpdateProjectStatus,
 		)
 		v1.POST(
-			"project/:project_id/expenditure",
-			r.AuthorizeRole(model.Admin),
-			r.CreateProjectExpenditure,
+			"project/:project_id/income",
+			r.AuthorizeRole(model.Inspector),
+			r.CreateIncomeTransaction,
 		)
 		v1.POST(
-			"project/:project_id/expenditure/:expenditure_id/detail",
-			r.CreateProjectExpenditureDetail,
+			"project/:project_id/expenditure/:expenditure_id/transaction",
+			r.CreateExpenditureTransaction,
 		)
 		v1.GET(
-			"project/:project_id/expenditure/:expenditure_id/detail",
-			r.GetProjectExpenditureDetailList,
+			"project/:project_id/expenditure/:expenditure_id/transaction",
+			r.GetExpenditureTransactionList,
 		)
 		v1.DELETE(
-			"project/:project_id/expenditure/:expenditure_id/detail/:expenditure_detail_id",
-			r.DeleteProjectExpenditureDetail,
+			"project/:project_id/expenditure/:expenditure_id/transaction/:transaction_id",
+			r.DeleteExpenditureTransaction,
 		)
 	}
 }
