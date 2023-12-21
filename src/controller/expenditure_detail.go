@@ -1,13 +1,15 @@
 package controller
 
 import (
-	"github.com/gin-gonic/gin"
 	"tigaputera-backend/sdk/auth"
 	errors "tigaputera-backend/sdk/error"
-	"tigaputera-backend/sdk/file"
 	"tigaputera-backend/sdk/number"
 	"tigaputera-backend/src/model"
 
+	"github.com/gin-gonic/gin"
+	"gorm.io/gorm"
+
+	"context"
 	"fmt"
 	"time"
 )
@@ -50,59 +52,30 @@ func (r *rest) CreateProjectExpenditureDetail(c *gin.Context) {
 		return
 	}
 
-	recieptImage, err := file.Init(c, "receiptImage")
+	recieptImage, err := r.getReceiptImage(c)
 	if err != nil {
-		r.ErrorResponse(c, errors.BadRequest("Gambar bukti tidak ditemukan"))
-		return
-	}
-
-	if !recieptImage.IsImage() {
-		r.ErrorResponse(
-			c,
-			errors.BadRequest("Gambar bukti harus berupa png, jpg, atau jpeg"))
+		r.ErrorResponse(c, err)
 		return
 	}
 
 	user := auth.GetUser(ctx)
-	var projectExpenditure model.ProjectExpenditure
-
-	err = r.db.WithContext(ctx).
-		InnerJoins("Project", r.db.Where(&model.Project{InspectorID: user.ID})).
-		First(&projectExpenditure, param.ExpenditureID).Error
-	if r.isNoRecordFound(err) {
-		r.ErrorResponse(c, errors.NotFound("pengeluaran proyek tidak ditemukan"))
-		return
-	} else if err != nil {
-		r.ErrorResponse(c, errors.InternalServerError(err.Error()))
+	projectExpenditure, err := r.getInspectorProjectExpenditureByID(ctx, param, user.ID)
+	if err != nil {
+		r.ErrorResponse(c, err)
 		return
 	}
 
-	// Get inspector's balance
-	var inspectorLedger model.InspectorLedger
-	inspectorLedgerParam := model.InspectorLedgerParam{
-		InspectorID: user.ID,
-	}
-	err = r.db.WithContext(ctx).
-		Where("inspector_id = ?", inspectorLedgerParam.InspectorID).
-		Order("created_at desc").
-		Take(&inspectorLedger).Error
-
-	if r.isNoRecordFound(err) {
-		r.ErrorResponse(c, errors.BadRequest("Saldo tidak mencukupi"))
+	inspectorLedger, err := r.getLatestLedger(ctx, user.ID)
+	if err != nil {
+		r.ErrorResponse(c, err)
 		return
-	} else if err != nil {
-		r.ErrorResponse(c, errors.InternalServerError(err.Error()))
 	}
 
 	tx := r.db.WithContext(ctx).Begin()
 
-	now := time.Now().Unix()
-	recieptImage.SetFileName(fmt.Sprintf(
-		"%s_%d_%d_%d", // username_projectId_expenditureId_timestamp
+	recieptImage.SetFileName(r.getExpenditureReceiptName(
 		user.Username,
-		projectExpenditure.Project.ID,
-		projectExpenditure.ID,
-		now,
+		projectExpenditure,
 	))
 
 	recieptURL, err := r.storage.Upload(
@@ -117,16 +90,12 @@ func (r *rest) CreateProjectExpenditureDetail(c *gin.Context) {
 	}
 
 	totalPrice := body.Price * body.Amount
-	expenditureDetail := model.ExpenditureDetail{
-		Name:          body.Name,
-		Price:         body.Price,
-		Amount:        body.Amount,
-		TotalPrice:    totalPrice,
-		ReceiptURL:    recieptURL,
-		ExpenditureID: projectExpenditure.ID,
-		ProjectID:     projectExpenditure.ProjectID,
-		InspectorID:   user.ID,
-	}
+	expenditureDetail := r.getExpenditureDetailInput(
+		body,
+		recieptURL,
+		projectExpenditure,
+		user.ID,
+	)
 
 	projectExpenditure.TotalPrice += expenditureDetail.TotalPrice
 	projectExpenditure.UpdatedBy = &user.ID
@@ -143,28 +112,26 @@ func (r *rest) CreateProjectExpenditureDetail(c *gin.Context) {
 		tx.Rollback()
 		r.ErrorResponse(c, errors.BadRequest("Saldo tidak mencukupi"))
 		return
-	} else {
-		newLedger = model.InspectorLedger{
-			InspectorID:    user.ID,
-			LedgerType:     model.Credit,
-			Ref:            fmt.Sprintf("%s Proyek %s", body.Name, projectExpenditure.Project.Name),
-			RefID:          &expenditureDetail.ID,
-			Amount:         totalPrice * -1,
-			CurrentBalance: inspectorLedger.FinalBalance,
-			FinalBalance:   inspectorLedger.FinalBalance - totalPrice,
-			ReceiptURL:     recieptURL,
-		}
 	}
 
-	if err := tx.Create(&newLedger).Error; err != nil {
-		tx.Rollback()
-		r.ErrorResponse(c, errors.InternalServerError(err.Error()))
-		return
+	ledgerRef := fmt.Sprintf(
+		"%s Proyek %s",
+		body.Name,
+		projectExpenditure.Project.Name,
+	)
+	newLedger = model.InspectorLedger{
+		InspectorID:    user.ID,
+		LedgerType:     model.Credit,
+		Ref:            ledgerRef,
+		RefID:          &expenditureDetail.ID,
+		Amount:         totalPrice * -1,
+		CurrentBalance: inspectorLedger.FinalBalance,
+		FinalBalance:   inspectorLedger.FinalBalance - totalPrice,
+		ReceiptURL:     recieptURL,
 	}
 
-	if err := tx.Save(&projectExpenditure).Error; err != nil {
-		tx.Rollback()
-		r.ErrorResponse(c, errors.InternalServerError(err.Error()))
+	if err := r.insertNewLedger(ctx, tx, newLedger, projectExpenditure); err != nil {
+		r.ErrorResponse(c, err)
 		return
 	}
 
@@ -175,6 +142,96 @@ func (r *rest) CreateProjectExpenditureDetail(c *gin.Context) {
 
 	r.CreatedResponse(c, "Berhasil membuat detail pengeluaran proyek", nil)
 }
+
+func (r *rest) getInspectorProjectExpenditureByID(
+	ctx context.Context,
+	param model.ExpenditureDetailParam,
+	inspectorID int64,
+) (model.ProjectExpenditure, error) {
+	var projectExpenditure model.ProjectExpenditure
+
+	err := r.db.WithContext(ctx).
+		InnerJoins("Project", r.db.Where(&model.Project{InspectorID: inspectorID})).
+		First(&projectExpenditure, param.ExpenditureID).Error
+	if r.isNoRecordFound(err) {
+		return projectExpenditure, errors.NotFound("pengeluaran proyek tidak ditemukan")
+	} else if err != nil {
+		return projectExpenditure, errors.InternalServerError(err.Error())
+	}
+
+	return projectExpenditure, nil
+}
+
+func (r *rest) getLatestLedger(
+	ctx context.Context,
+	inspectorID int64,
+) (model.InspectorLedger, error) {
+	var latestLedger model.InspectorLedger
+	err := r.db.WithContext(ctx).
+		Where("inspector_id = ?", inspectorID).
+		Order("created_at desc").
+		Take(&latestLedger).Error
+	if r.isNoRecordFound(err) {
+		return latestLedger, errors.BadRequest("Saldo tidak mencukupi")
+	} else if err != nil {
+		return latestLedger, errors.InternalServerError(err.Error())
+	}
+
+	return latestLedger, nil
+}
+
+func (r *rest) getExpenditureReceiptName(
+	username string,
+	projectExpenditure model.ProjectExpenditure,
+) string {
+	now := time.Now().Unix()
+	return fmt.Sprintf(
+		"%s_%d_%d_%d", // username_projectId_expenditureId_timestamp
+		username,
+		projectExpenditure.Project.ID,
+		projectExpenditure.ID,
+		now,
+	)
+}
+
+func (r *rest) getExpenditureDetailInput(
+	body model.CreateExpenditureDetailBody,
+	recieptURL string,
+	projectExpenditure model.ProjectExpenditure,
+	userID int64,
+) model.ExpenditureDetail {
+	return model.ExpenditureDetail{
+		Name:          body.Name,
+		Price:         body.Price,
+		Amount:        body.Amount,
+		TotalPrice:    body.Price * body.Amount,
+		ReceiptURL:    recieptURL,
+		ProjectID:     projectExpenditure.ProjectID,
+		ExpenditureID: projectExpenditure.ID,
+		InspectorID:   userID,
+	}
+}
+
+func (r *rest) insertNewLedger(
+	ctx context.Context,
+	tx *gorm.DB,
+	newLedger model.InspectorLedger,
+	projectExpenditure model.ProjectExpenditure,
+) error {
+	if err := tx.Create(&newLedger).Error; err != nil {
+		tx.Rollback()
+		return errors.InternalServerError(err.Error())
+	}
+
+	if err := tx.Save(&projectExpenditure).Error; err != nil {
+		tx.Rollback()
+		return errors.InternalServerError(err.Error())
+	}
+
+	return nil
+}
+
+
 
 // @Summary Get List Project Expenditure Detail
 // @Description Get list project expenditure detail
@@ -197,15 +254,9 @@ func (r *rest) GetProjectExpenditureDetailList(c *gin.Context) {
 		return
 	}
 
-	var projectExpenditure model.ProjectExpenditure
-	err := r.db.WithContext(ctx).
-		InnerJoins("Project", r.db.Where(&model.Project{ID: param.ProjectID})).
-		First(&projectExpenditure, param.ExpenditureID).Error
-	if r.isNoRecordFound(err) {
-		r.ErrorResponse(c, errors.NotFound("pengeluaran proyek tidak ditemukan"))
-		return
-	} else if err != nil {
-		r.ErrorResponse(c, errors.InternalServerError(err.Error()))
+	projectExpenditure, err := r.getProjectExpenditureByID(ctx, param)
+	if err != nil {
+		r.ErrorResponse(c, err)
 		return
 	}
 
@@ -239,17 +290,8 @@ func (r *rest) GetProjectExpenditureDetailList(c *gin.Context) {
 			return
 		}
 
-		expenditureDetailRes := model.ExpenditureDetailList{
-			ID:         expenditureDetail.ID,
-			Name:       expenditureDetail.Name,
-			Price:      number.ConvertToRupiah(expenditureDetail.Price),
-			Amount:     expenditureDetail.Amount,
-			TotalPrice: number.ConvertToRupiah(expenditureDetail.TotalPrice),
-			ReceiptURL: expenditureDetail.ReceiptURL,
-		}
-
-		expenditureDetails = append(expenditureDetails, expenditureDetailRes)
-
+		expenditureDetailList := r.getExpenditureDetailList(expenditureDetail)
+		expenditureDetails = append(expenditureDetails, expenditureDetailList)
 		sumTotal += expenditureDetail.TotalPrice
 	}
 
@@ -262,6 +304,37 @@ func (r *rest) GetProjectExpenditureDetailList(c *gin.Context) {
 	}
 
 	r.SuccessResponse(c, "Berhasil mendapatkan detail pengeluaran proyek", expenditureDetailListResponse, nil)
+}
+
+func (r *rest) getProjectExpenditureByID(
+	ctx context.Context,
+	param model.ExpenditureDetailParam,
+) (model.ProjectExpenditure, error) {
+	var projectExpenditure model.ProjectExpenditure
+
+	err := r.db.WithContext(ctx).
+		InnerJoins("Project", r.db.Where(&model.Project{ID: param.ProjectID})).
+		First(&projectExpenditure, param.ExpenditureID).Error
+	if r.isNoRecordFound(err) {
+		return projectExpenditure, errors.NotFound("pengeluaran proyek tidak ditemukan")
+	} else if err != nil {
+		return projectExpenditure, errors.InternalServerError(err.Error())
+	}
+
+	return projectExpenditure, nil
+}
+
+func (r *rest) getExpenditureDetailList(
+	expenditureDetail model.ExpenditureDetail,
+) model.ExpenditureDetailList {
+	return model.ExpenditureDetailList{
+		ID:         expenditureDetail.ID,
+		Name:       expenditureDetail.Name,
+		Price:      number.ConvertToRupiah(expenditureDetail.Price),
+		Amount:     expenditureDetail.Amount,
+		TotalPrice: number.ConvertToRupiah(expenditureDetail.TotalPrice),
+		ReceiptURL: expenditureDetail.ReceiptURL,
+	}
 }
 
 // @Summary Delete Project Expenditure Detail
