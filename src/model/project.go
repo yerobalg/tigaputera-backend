@@ -122,9 +122,8 @@ type Budget struct {
 }
 
 type ProjectStatistics struct {
-	TotalIncome      string `json:"totalIncome"`
-	TotalExpenditure string `json:"totalExpenditure"`
-	Margin           string `json:"margin"`
+	TotalIncome          string `json:"totalIncome"`
+	PercentageFromBudget float64
 }
 
 type LabelStyle struct {

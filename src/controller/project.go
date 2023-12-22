@@ -2,12 +2,13 @@ package controller
 
 import (
 	"database/sql"
+	"github.com/gin-gonic/gin"
 	"tigaputera-backend/sdk/auth"
 	errors "tigaputera-backend/sdk/error"
 	"tigaputera-backend/sdk/number"
 	"tigaputera-backend/src/model"
 
-	"github.com/gin-gonic/gin"
+	"context"
 )
 
 // @Summary Create Project
@@ -244,8 +245,8 @@ func (r *rest) GetProjectDetail(c *gin.Context) {
 		return
 	}
 
-	ppnPrice := int64(float64(*project.Budget) * project.PPN * -1)
-	pphPrice := int64(float64(*project.Budget) * project.PPH * -1)
+	ppnPrice := -int64(float64(*project.Budget) * project.PPN)
+	pphPrice := -int64(float64(*project.Budget) * project.PPH)
 	totalBudget := *project.Budget + ppnPrice + pphPrice
 
 	projectBudget := model.ProjectBudget{
@@ -268,59 +269,19 @@ func (r *rest) GetProjectDetail(c *gin.Context) {
 		Total:         number.ConvertToRupiah(totalBudget),
 	}
 
-	expenditureParam := model.ProjectExpenditureParam{
-		ProjectID: param.ID,
-	}
-
-	rows, err := r.db.WithContext(ctx).
-		Model(&model.ProjectExpenditure{}).
-		Where(&expenditureParam).
-		Order("sequence").
-		Rows()
+	projectExpenditure, totalExpenditure, err := r.getProjectExpenditure(
+		ctx,
+		param.ID,
+	)
 	if err != nil {
 		r.ErrorResponse(c, errors.InternalServerError(err.Error()))
 		return
 	}
 
-	defer rows.Close()
-	var projectExpenditure model.ProjectExpenditureResponse
-	expenditures := []model.ProjectExpenditureList{}
-	var totalExpenditure int64
-
-	for rows.Next() {
-		var expenditure model.ProjectExpenditure
-		if err := r.db.ScanRows(rows, &expenditure); err != nil {
-			r.ErrorResponse(c, errors.InternalServerError(err.Error()))
-			return
-		}
-
-		expenditures = append(expenditures, model.ProjectExpenditureList{
-			ID:          expenditure.ID,
-			Sequence:    expenditure.Sequence,
-			Name:        expenditure.Name,
-			TotalPrice:  number.ConvertToRupiah(*expenditure.TotalPrice),
-			IsFixedCost: *expenditure.IsFixedCost,
-		})
-
-		totalExpenditure += *expenditure.TotalPrice
-	}
-
-	projectExpenditure.Expenditures = expenditures
-	projectExpenditure.SumTotal = number.ConvertToRupiah(totalExpenditure)
-
-	var mqtProjectStats model.MqtProjectStats
-	if err := r.db.WithContext(ctx).
-		Model(&model.MqtProjectStats{}).
-		Where("interval_month = 1 AND project_id = ?", param.ID).
-		Take(&mqtProjectStats).Error; err != nil {
+	projectStats, err := r.GetProjectDetailStats(ctx, param.ID, totalBudget)
+	if err != nil {
 		r.ErrorResponse(c, errors.InternalServerError(err.Error()))
 		return
-	}
-
-	projectStats := model.ProjectStatistics{
-		TotalIncome:      number.ConvertToRupiah(*mqtProjectStats.TotalIncome),
-		TotalExpenditure: number.ConvertToRupiah(*mqtProjectStats.TotalExpenditure),
-		Margin:           number.ConvertToRupiah(*mqtProjectStats.Margin),
 	}
 
 	margin := totalBudget - totalExpenditure
@@ -345,6 +306,76 @@ func (r *rest) GetProjectDetail(c *gin.Context) {
 	}
 
 	r.SuccessResponse(c, "Berhasil mendapatkan proyek", projectDetailResponse, nil)
+}
+
+func (r *rest) getProjectExpenditure(
+	ctx context.Context,
+	projectID int64,
+) (model.ProjectExpenditureResponse, int64, error) {
+	var res model.ProjectExpenditureResponse
+	var totalExpenditure int64
+
+	expenditureParam := model.ProjectExpenditureParam{
+		ProjectID: projectID,
+	}
+
+	rows, err := r.db.WithContext(ctx).
+		Model(&model.ProjectExpenditure{}).
+		Where(&expenditureParam).
+		Order("sequence").
+		Rows()
+	if err != nil {
+		return res, totalExpenditure, err
+	}
+
+	defer rows.Close()
+	expenditures := []model.ProjectExpenditureList{}
+
+	for rows.Next() {
+		var expenditure model.ProjectExpenditure
+		if err := r.db.ScanRows(rows, &expenditure); err != nil {
+			return res, totalExpenditure, err
+		}
+
+		expenditures = append(expenditures, model.ProjectExpenditureList{
+			ID:          expenditure.ID,
+			Sequence:    expenditure.Sequence,
+			Name:        expenditure.Name,
+			TotalPrice:  number.ConvertToRupiah(*expenditure.TotalPrice),
+			IsFixedCost: *expenditure.IsFixedCost,
+		})
+
+		totalExpenditure += *expenditure.TotalPrice
+	}
+
+	res.Expenditures = expenditures
+	res.SumTotal = number.ConvertToRupiah(totalExpenditure)
+
+	return res, totalExpenditure, nil
+}
+
+func (r *rest) GetProjectDetailStats(
+	ctx context.Context,
+	projectID int64,
+	totalBudget int64,
+) (model.ProjectStatistics, error) {
+	var projectStats model.ProjectStatistics
+
+	var mqtProjectStats model.MqtProjectStats
+	if err := r.db.WithContext(ctx).
+		Model(&model.MqtProjectStats{}).
+		Where("interval_month = 1 AND project_id = ?", projectID).
+		Take(&mqtProjectStats).Error; err != nil {
+		return projectStats, err
+	}
+
+	incomePercent := number.GetPercentage(*mqtProjectStats.TotalIncome, totalBudget)
+	projectStats = model.ProjectStatistics{
+		TotalIncome:          number.ConvertToRupiah(*mqtProjectStats.TotalIncome),
+		PercentageFromBudget: incomePercent,
+	}
+
+	return projectStats, nil
 }
 
 // @Summary Update Project Budget
