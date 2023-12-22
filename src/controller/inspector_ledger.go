@@ -182,8 +182,8 @@ func (r *rest) getTransaction(ledger model.Ledger) model.InspectorLedgerTransact
 	return model.InspectorLedgerTransaction{
 		Timestamp:     ledger.CreatedAt,
 		Type:          string(ledger.LedgerType),
-		RefName:       ledger.Ref,
-		Amount:        number.ConvertToRupiah(ledger.Amount),
+		RefName:       *ledger.Description,
+		Amount:        number.ConvertToRupiah(ledger.TotalPrice),
 		InspectorName: ledger.Inspector.Name,
 		RecieptURL:    ledger.ReceiptURL,
 	}
@@ -197,10 +197,10 @@ func (r *rest) getAllInspectorLedgerRows(
 	rows, err := r.db.WithContext(ctx).
 		Model(&model.Ledger{}).
 		InnerJoins("Inspector").
-		Where("inspector_ledgers.created_at >= ?", startTime).
+		Where("ledgers.created_at >= ?", startTime).
 		Limit(int(param.Limit)).
 		Offset(int(param.Offset)).
-		Order("inspector_ledgers.created_at desc").
+		Order("ledgers.created_at desc").
 		Rows()
 	if err != nil {
 		return nil, err
@@ -234,10 +234,10 @@ func (r *rest) getSingleInspectorLedgerRows(
 	rows, err := r.db.WithContext(ctx).
 		Model(&model.Ledger{}).
 		InnerJoins("Inspector").
-		Where("inspector_ledgers.created_at >= ? AND inspector_id = ?", startTime, inspectorID).
+		Where("ledgers.created_at >= ? AND inspector_id = ?", startTime, inspectorID).
 		Limit(int(param.Limit)).
 		Offset(int(param.Offset)).
-		Order("inspector_ledgers.created_at desc").
+		Order("ledgers.created_at desc").
 		Rows()
 	if err != nil {
 		return nil, err

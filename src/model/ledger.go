@@ -72,6 +72,18 @@ type InspectorLedgerTransaction struct {
 	RecieptURL    string `json:"receiptUrl"`
 }
 
+type ProjectLedgerResponse struct {
+	Account      ProjectLedgerAccount         `json:"account"`
+	Transactions []InspectorLedgerTransaction `json:"transactions"`
+}
+
+type ProjectLedgerAccount struct {
+	ProjectID      int64  `json:"projectId"`
+	ProjectName    string `json:"projectName"`
+	InspectorName  string `json:"inspectorName"`
+	CurrentBalance string `json:"currentBalance"`
+}
+
 type CreateExpenditureDetailBody struct {
 	Name   string `json:"name" form:"name" validate:"required"`
 	Price  int64  `json:"price" form:"price" validate:"required"`

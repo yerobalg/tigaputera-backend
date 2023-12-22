@@ -41,18 +41,18 @@ func (r *rest) CreateProject(c *gin.Context) {
 	}
 
 	project := model.Project{
-		Name:             body.Name,
-		Description:      body.Description,
-		Type:             body.Type,
-		DeptName:         body.DeptName,
-		CompanyName:      body.CompanyName,
-		Status:           string(model.Running),
-		Volume:           body.Volume,
-		Length:           body.Length,
-		Width:            body.Width,
-		InspectorID:      body.InspectorID,
-		StartDate:        body.StartDate,
-		FinalDate:        body.FinalDate,
+		Name:        body.Name,
+		Description: body.Description,
+		Type:        body.Type,
+		DeptName:    body.DeptName,
+		CompanyName: body.CompanyName,
+		Status:      string(model.Running),
+		Volume:      body.Volume,
+		Length:      body.Length,
+		Width:       body.Width,
+		InspectorID: body.InspectorID,
+		StartDate:   body.StartDate,
+		FinalDate:   body.FinalDate,
 	}
 
 	tx := r.db.WithContext(ctx).Begin()
@@ -308,6 +308,22 @@ func (r *rest) GetProjectDetail(c *gin.Context) {
 	projectExpenditure.Expenditures = expenditures
 	projectExpenditure.SumTotal = number.ConvertToRupiah(totalExpenditure)
 
+	var mqtProjectStats model.MqtProjectStats
+	if err := r.db.WithContext(ctx).
+		Model(&model.MqtProjectStats{}).
+		Where("interval_month = 1 AND project_id = ?", param.ID).
+		Take(&mqtProjectStats).Error; err != nil {
+		r.ErrorResponse(c, errors.InternalServerError(err.Error()))
+		return
+	}
+
+	projectStats := model.ProjectStatistics{
+		TotalIncome:      number.ConvertToRupiah(*mqtProjectStats.TotalIncome),
+		TotalExpenditure: number.ConvertToRupiah(*mqtProjectStats.TotalExpenditure),
+		Margin:           number.ConvertToRupiah(*mqtProjectStats.Margin),
+	}
+
+	margin := totalBudget - totalExpenditure
 	projectDetailResponse := model.ProjectDetailResponse{
 		ID:                 project.ID,
 		Name:               project.Name,
@@ -324,7 +340,8 @@ func (r *rest) GetProjectDetail(c *gin.Context) {
 		FinalDate:          project.FinalDate,
 		ProjectBudget:      projectBudget,
 		ProjectExpenditure: projectExpenditure,
-		Margin:             number.ConvertToRupiah(totalBudget - totalExpenditure),
+		ProjectStatistics:  projectStats,
+		Margin:             number.ConvertToRupiah(margin),
 	}
 
 	r.SuccessResponse(c, "Berhasil mendapatkan proyek", projectDetailResponse, nil)

@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"github.com/gin-gonic/gin"
 	"tigaputera-backend/sdk/auth"
 	errors "tigaputera-backend/sdk/error"
 	"tigaputera-backend/sdk/file"
@@ -8,10 +9,9 @@ import (
 	"tigaputera-backend/src/model"
 
 	"context"
+	"database/sql"
 	"fmt"
 	"time"
-
-	"github.com/gin-gonic/gin"
 )
 
 // @Summary Create Project Income
@@ -629,4 +629,190 @@ func (r *rest) DeleteExpenditureTransaction(c *gin.Context) {
 	}
 
 	r.SuccessResponse(c, "Berhasil menghapus detail pengeluaran proyek", nil, nil)
+}
+
+// @Summary Get List Project Transaction
+// @Description Get list project transaction
+// @Tags Project Ledger
+// @Produce json
+// @Security BearerAuth
+// @Param project_id path int true "project_id"
+// @Param page query int false "page"
+// @Param limit query int false "limit"
+// @Param interval_month query int false "interval_month"
+// @Success 200 {object} model.HTTPResponse{data=model.ExpenditureDetailListResponse}
+// @Failure 401 {object} model.HTTPResponse{}
+// @Failure 404 {object} model.HTTPResponse{}
+// @Failure 500 {object} model.HTTPResponse{}
+// @Router /v1/project/{project_id}/transaction [GET]
+func (r *rest) GetProjectTransactionList(c *gin.Context) {
+	ctx := c.Request.Context()
+	var param model.LedgerParam
+
+	if err := r.BindParam(c, &param); err != nil {
+		r.ErrorResponse(c, err)
+		return
+	}
+
+	if param.IntervalMonth <= 0 {
+		param.IntervalMonth = 1
+	}
+
+	project, err := r.getProjectByID(ctx, param.ProjectID)
+	if err != nil {
+		r.ErrorResponse(c, err)
+		return
+	}
+
+	param.PaginationParam.SetDefaultPagination()
+
+	rows, err := r.getTransactionRows(ctx, &param, project)
+	if err != nil {
+		r.ErrorResponse(c, errors.InternalServerError(err.Error()))
+		return
+	}
+
+	defer rows.Close()
+	var sumTotal int64
+	transactions := []model.InspectorLedgerTransaction{}
+	for rows.Next() {
+		var ledger model.Ledger
+		if err := r.db.ScanRows(rows, &ledger); err != nil {
+			r.ErrorResponse(c, errors.InternalServerError(err.Error()))
+			return
+		}
+
+		ledgerDetail := r.getTransaction(ledger)
+		transactions = append(transactions, ledgerDetail)
+		sumTotal += ledger.TotalPrice
+	}
+
+	if err := r.countTransaction(
+		ctx, 
+		project, 
+		&param.TotalElement, 
+		param.IntervalMonth,
+	); err != nil {
+		r.ErrorResponse(c, errors.InternalServerError(err.Error()))
+		return
+	}
+	param.ProcessPagination(int64(len(transactions)))
+
+	inspectorBalance, err := r.getLatestProjectBalance(ctx, project)
+	if err != nil {
+		r.ErrorResponse(c, err)
+		return
+	}
+
+	r.SuccessResponse(
+		c,
+		"Berhasil mendapatkan buku kas proyek",
+		r.getProjectLedgerRes(project, inspectorBalance, transactions),
+		&param.PaginationParam,
+	)
+}
+
+func (r *rest) getProjectByID(
+	ctx context.Context,
+	projectID int64,
+) (model.Project, error) {
+	var project model.Project
+
+	err := r.db.WithContext(ctx).
+		InnerJoins("Inspector").
+		First(&project, projectID).Error
+	if r.isNoRecordFound(err) {
+		return project, errors.NotFound("proyek tidak ditemukan")
+	} else if err != nil {
+		return project, errors.InternalServerError(err.Error())
+	}
+
+	return project, nil
+}
+
+func (r *rest) getTransactionRows(
+	ctx context.Context,
+	param *model.LedgerParam,
+	project model.Project,
+) (*sql.Rows, error) {
+	startTime := r.getStartTime(int(param.IntervalMonth))
+	rows, err := r.db.WithContext(ctx).
+		Model(&model.Ledger{}).
+		Where(
+			`project_id = ? AND inspector_id = ? AND created_at >= ?`,
+			project.ID,
+			project.InspectorID,
+			startTime,
+		).
+		Limit(int(param.Limit)).
+		Offset(int(param.Offset)).
+		Order("created_at desc").
+		Rows()
+	if err != nil {
+		return nil, err
+	}
+
+	return rows, nil
+}
+
+func (r *rest) countTransaction(
+	ctx context.Context,
+	project model.Project,
+	count *int64,
+	intervalMonth int64,
+) error {
+	startTime := r.getStartTime(int(intervalMonth))
+
+	err := r.db.WithContext(ctx).
+		Model(&model.Ledger{}).
+		Where(
+			`project_id = ? AND inspector_id = ? AND created_at >= ?`,
+			project.ID,
+			project.InspectorID,
+			startTime,
+		).
+		Count(count).Error
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (r *rest) getLatestProjectBalance(
+	ctx context.Context,
+	project model.Project,
+) (int64, error) {
+	var ledger model.Ledger
+	err := r.db.WithContext(ctx).
+		Where(
+			`project_id = ? AND inspector_id = ?`,
+			project.ID,
+			project.InspectorID,
+		).
+		Order("created_at desc").
+		First(&ledger).Error
+	if r.isNoRecordFound(err) {
+		return 0, nil
+	} else if err != nil {
+		return 0, err
+	}
+
+	return *ledger.FinalProjectBalance, nil
+}
+
+func (r *rest) getProjectLedgerRes(
+	project model.Project,
+	balance int64,
+	transactions []model.InspectorLedgerTransaction,
+) model.ProjectLedgerResponse {
+	return model.ProjectLedgerResponse{
+		Account: model.ProjectLedgerAccount{
+			ProjectID:      project.ID,
+			ProjectName:    project.Name,
+			InspectorName:  project.Inspector.Name,
+			CurrentBalance: number.ConvertToRupiah(balance),
+		},
+		Transactions: transactions,
+	}
 }

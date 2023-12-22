@@ -146,6 +146,10 @@ func (r *rest) RegisterMiddlewareAndRoutes() {
 			"project/:project_id/expenditure/:expenditure_id/transaction/:transaction_id",
 			r.DeleteExpenditureTransaction,
 		)
+		v1.GET(
+			"project/:project_id/transaction",
+			r.GetProjectTransactionList,
+		)
 	}
 }
 

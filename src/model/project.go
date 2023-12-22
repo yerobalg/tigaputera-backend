@@ -103,6 +103,7 @@ type ProjectDetailResponse struct {
 	StartDate          int64                      `json:"startDate"`
 	FinalDate          int64                      `json:"finalDate"`
 	InspectorName      string                     `json:"inspectorName"`
+	ProjectStatistics  ProjectStatistics          `json:"projectStatistics"`
 	ProjectBudget      ProjectBudget              `json:"projectBudget"`
 	ProjectExpenditure ProjectExpenditureResponse `json:"projectExpenditure"`
 	Margin             string                     `json:"margin"`
@@ -118,6 +119,12 @@ type ProjectBudget struct {
 type Budget struct {
 	Name  string `json:"name"`
 	Price string `json:"price"`
+}
+
+type ProjectStatistics struct {
+	TotalIncome      string `json:"totalIncome"`
+	TotalExpenditure string `json:"totalExpenditure"`
+	Margin           string `json:"margin"`
 }
 
 type LabelStyle struct {

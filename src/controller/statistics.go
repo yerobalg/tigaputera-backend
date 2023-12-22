@@ -41,6 +41,17 @@ func (r *rest) RefreshStatistics(c *gin.Context) {
 		return
 	}
 
+	// delete all project stats
+	if err := tx.
+		Unscoped().
+		Where("1 = 1").
+		Delete(&model.MqtProjectStats{}).
+		Error; err != nil {
+		tx.Rollback()
+		r.ErrorResponse(c, errors.InternalServerError(err.Error()))
+		return
+	}
+
 	users := []model.User{}
 	if err := tx.
 		Where("role = ?", model.Inspector).
@@ -67,7 +78,7 @@ func (r *rest) RefreshStatistics(c *gin.Context) {
 		return
 	}
 
-	projectStats, err := r.getProjectStats(tx, projects, intervalMonths)
+	projectStats, err := r.getProjectStats(tx, projects)
 	if err != nil {
 		tx.Rollback()
 		r.ErrorResponse(c, errors.InternalServerError(err.Error()))
@@ -216,10 +227,9 @@ func (r *rest) getInspectorStats(
 func (r *rest) getProjectStats(
 	tx *gorm.DB,
 	projects []model.Project,
-	intervalMonths []int,
 ) ([]model.MqtProjectStats, error) {
 	var projectStats []model.MqtProjectStats
-
+	intervalMonths := []int{1} // TODO: change to 1, 3, 6, 12
 	for _, intervalMonth := range intervalMonths {
 		startDate := time.Now().UTC().AddDate(0, -intervalMonth, 0)
 
@@ -246,34 +256,25 @@ func (r *rest) getProjectStats(
 		).Unix()
 
 		for _, project := range projects {
-			totalExpenditureData, err := r.getProjectExpenditureCount(tx, starDateUnix, project.ID)
+			totalExpenditure, err := r.sumExpenditureByType(tx, starDateUnix, "", 0, project.ID)
 			if err != nil {
 				return projectStats, err
 			}
 
-			totalIncomeData, err := r.getProjectIncomeCount(tx, starDateUnix, project.ID)
+			totalIncome, err := r.sumIncomeByType(tx, starDateUnix, "", 0, project.ID)
 			if err != nil {
 				return projectStats, err
 			}
 
-			balance := totalIncomeData.Total - totalExpenditureData.Total
-
+			margin := totalIncome - totalExpenditure
 			projectStat := model.MqtProjectStats{
-				StartTime:                starDateUnix,
-				EndTime:                  endDateUnix,
-				IntervalMonth:            int64(intervalMonth),
-				ProjectID:                &project.ID,
-				TotalDrainageExpenditure: &totalExpenditureData.Drainage,
-				TotalAshpaltExpenditure:  &totalExpenditureData.Ashpalt,
-				TotalConcreteExpenditure: &totalExpenditureData.Concrete,
-				TotalBuildingExpenditure: &totalExpenditureData.Building,
-				TotalExpenditure:         &totalExpenditureData.Total,
-				TotalDrainageIncome:      &totalIncomeData.Drainage,
-				TotalAshpaltIncome:       &totalIncomeData.Ashpalt,
-				TotalConcreteIncome:      &totalIncomeData.Concrete,
-				TotalBuildingIncome:      &totalIncomeData.Building,
-				TotalIncome:              &totalIncomeData.Total,
-				Balance:                  &balance,
+				StartTime:        starDateUnix,
+				EndTime:          endDateUnix,
+				IntervalMonth:    int64(intervalMonth),
+				ProjectID:        &[]int64{project.ID}[0],
+				TotalExpenditure: &totalExpenditure,
+				TotalIncome:      &totalIncome,
+				Margin:           &margin,
 			}
 
 			projectStats = append(projectStats, projectStat)
@@ -380,42 +381,6 @@ func (r *rest) getInspectorExpenditureCount(
 	return totalExpenditureStats, nil
 }
 
-func (r *rest) getProjectExpenditureCount(
-	tx *gorm.DB,
-	startDateUnix int64,
-	projectID int64,
-) (model.ProjectData, error) {
-	var totalExpenditureStats model.ProjectData
-
-	totalDrainage, err := r.sumExpenditureByType(tx, startDateUnix, "Drainase", 0, projectID)
-	if err != nil {
-		return totalExpenditureStats, err
-	}
-
-	totalAshpalt, err := r.sumExpenditureByType(tx, startDateUnix, "Hotmix", 0, projectID)
-	if err != nil {
-		return totalExpenditureStats, err
-	}
-
-	totalConcrete, err := r.sumExpenditureByType(tx, startDateUnix, "Beton", 0, projectID)
-	if err != nil {
-		return totalExpenditureStats, err
-	}
-
-	totalBuilding, err := r.sumExpenditureByType(tx, startDateUnix, "Bangunan", 0, projectID)
-	if err != nil {
-		return totalExpenditureStats, err
-	}
-
-	totalExpenditureStats.Drainage = totalDrainage
-	totalExpenditureStats.Ashpalt = totalAshpalt
-	totalExpenditureStats.Concrete = totalConcrete
-	totalExpenditureStats.Building = totalBuilding
-	totalExpenditureStats.Total = totalDrainage + totalAshpalt + totalConcrete + totalBuilding
-
-	return totalExpenditureStats, nil
-}
-
 func (r *rest) sumExpenditureByType(
 	tx *gorm.DB,
 	startDateUnix int64,
@@ -434,11 +399,18 @@ func (r *rest) sumExpenditureByType(
 		whereQueryArgs = append(whereQueryArgs, projectID)
 	}
 
+	joinQuery := "INNER JOIN projects P ON P.id = IL.project_id AND 1=?"
+	joinQueryArgs := []interface{}{1}
+	if projectType != "" {
+		joinQuery += " AND P.type = ?"
+		joinQueryArgs = append(joinQueryArgs, projectType)
+	}
+
 	var total int64
 	if err := tx.
 		Table("ledgers IL").
 		Select("COALESCE(SUM(IL.total_price), 0) AS total").
-		Joins("INNER JOIN projects P ON P.id = ED.project_id AND P.type = ?", projectType).
+		Joins(joinQuery, joinQueryArgs...).
 		Where(whereQuery, whereQueryArgs...).
 		Scan(&total).
 		Error; err != nil {
@@ -446,42 +418,6 @@ func (r *rest) sumExpenditureByType(
 	}
 
 	return -total, nil
-}
-
-func (r *rest) getProjectIncomeCount(
-	tx *gorm.DB,
-	startDateUnix int64,
-	projectID int64,
-) (model.ProjectData, error) {
-	var totalIncomeStats model.ProjectData
-
-	totalDrainage, err := r.sumIncomeByType(tx, startDateUnix, "Drainase", 0, projectID)
-	if err != nil {
-		return totalIncomeStats, err
-	}
-
-	totalAshpalt, err := r.sumIncomeByType(tx, startDateUnix, "Hotmix", 0, projectID)
-	if err != nil {
-		return totalIncomeStats, err
-	}
-
-	totalConcrete, err := r.sumIncomeByType(tx, startDateUnix, "Beton", 0, projectID)
-	if err != nil {
-		return totalIncomeStats, err
-	}
-
-	totalBuilding, err := r.sumIncomeByType(tx, startDateUnix, "Bangunan", 0, projectID)
-	if err != nil {
-		return totalIncomeStats, err
-	}
-
-	totalIncomeStats.Drainage = totalDrainage
-	totalIncomeStats.Ashpalt = totalAshpalt
-	totalIncomeStats.Concrete = totalConcrete
-	totalIncomeStats.Building = totalBuilding
-	totalIncomeStats.Total = totalDrainage + totalAshpalt + totalConcrete + totalBuilding
-
-	return totalIncomeStats, nil
 }
 
 func (r *rest) sumIncomeByType(
@@ -502,11 +438,18 @@ func (r *rest) sumIncomeByType(
 		whereQueryArgs = append(whereQueryArgs, projectID)
 	}
 
+	joinQuery := "INNER JOIN projects P ON P.id = IL.project_id AND 1=?"
+	joinQueryArgs := []interface{}{1}
+	if projectType != "" {
+		joinQuery += " AND P.type = ?"
+		joinQueryArgs = append(joinQueryArgs, projectType)
+	}
+
 	var total int64
 	if err := tx.
 		Table("ledgers IL").
 		Select("COALESCE(SUM(IL.total_price), 0) AS total").
-		Joins("INNER JOIN projects P ON P.id = ED.project_id AND P.type = ?", projectType).
+		Joins(joinQuery, joinQueryArgs...).
 		Where(whereQuery, whereQueryArgs...).
 		Scan(&total).
 		Error; err != nil {
