@@ -117,8 +117,10 @@ func (r *rest) RegisterMiddlewareAndRoutes() {
 	{
 		v1.POST("project", r.AuthorizeRole(model.Admin), r.CreateProject)
 		v1.GET("project", r.GetListProject)
+		v1.GET("project/name", r.GetListProjectName)
 		v1.GET("project/:project_id", r.GetProject)
 		v1.GET("project/:project_id/detail", r.GetProjectDetail)
+		v1.GET("project/:project_id/ledger", r.GetProjectLedger)
 		v1.PATCH(
 			"project/:project_id/budget",
 			r.AuthorizeRole(model.Admin),
@@ -145,10 +147,6 @@ func (r *rest) RegisterMiddlewareAndRoutes() {
 		v1.DELETE(
 			"project/:project_id/expenditure/:expenditure_id/transaction/:transaction_id",
 			r.DeleteExpenditureTransaction,
-		)
-		v1.GET(
-			"project/:project_id/transaction",
-			r.GetProjectTransactionList,
 		)
 	}
 }

@@ -586,7 +586,7 @@ func (r *rest) GetUserStatsDetail(c *gin.Context) {
 	if r.isNoRecordFound(err) {
 		emptyUserStats := model.MqtInspectorStats{
 			StartTime:                userStatsParam.StartTime,
-			EndTime:                  time.Now().UTC().Unix(),
+			EndTime:                  time.Time{}.Unix(),
 			IntervalMonth:            userStatsParam.IntervalMonth,
 			InspectorID:              &userStatsParam.InspectorID,
 			InspectorUsername:        user.Username,

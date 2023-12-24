@@ -99,6 +99,7 @@ func (r *rest) CreateIncomeTransaction(c *gin.Context) {
 	}
 
 	latestLedger.Project.UpdatedBy = &user.ID
+	*latestLedger.Project.Income += reqBody.Amount
 
 	if err := r.insertIncome(ctx, newLedger, latestLedger); err != nil {
 		r.ErrorResponse(c, err)
@@ -134,6 +135,10 @@ func (r *rest) getLatestLedger(
 		FinalInspectorBalance:   new(int64),
 		CurrentProjectBalance:   new(int64),
 		FinalProjectBalance:     new(int64),
+		Project: model.Project{
+			ID:     projectId,
+			Income: new(int64),
+		},
 	}
 	err := r.db.WithContext(ctx).
 		Where("inspector_id = ?", inspectorID).
@@ -148,11 +153,11 @@ func (r *rest) getLatestLedger(
 
 	var projectLedger model.Ledger
 	err = r.db.WithContext(ctx).
-		Where(
-			`inspector_id = ? AND project_id = ?`,
-			inspectorID,
-			projectId,
-		).
+		InnerJoins("Project").
+		Where(model.Ledger{
+			ProjectID:   projectId,
+			InspectorID: inspectorID,
+		}).
 		Order("created_at desc").
 		Take(&projectLedger).Error
 	if r.isNoRecordFound(err) {
@@ -181,9 +186,14 @@ func (r *rest) insertIncome(
 		return err
 	}
 
+	updateProject := model.Project{
+		Income:    latestLedger.Project.Income,
+		UpdatedBy: latestLedger.Project.UpdatedBy,
+	}
+
 	if err := tx.Model(&model.Project{}).
 		Where("id = ?", incomeTrans.ProjectID).
-		Update("updated_by", incomeTrans.InspectorID).Error; err != nil {
+		Updates(updateProject).Error; err != nil {
 		tx.Rollback()
 		return err
 	}
@@ -359,7 +369,7 @@ func (r *rest) insertExpenditure(
 	expenditureTrans model.Ledger,
 	projectExpenditure model.ProjectExpenditure,
 ) error {
-	expenditurePrice := *projectExpenditure.TotalPrice + expenditureTrans.TotalPrice
+	expenditurePrice := *projectExpenditure.TotalPrice - expenditureTrans.TotalPrice
 	expenditureUpdate := model.ProjectExpenditure{
 		TotalPrice: &expenditurePrice,
 		UpdatedBy:  &expenditureTrans.InspectorID,
@@ -460,6 +470,8 @@ func (r *rest) GetExpenditureTransactionList(c *gin.Context) {
 			return
 		}
 
+		expenditure.TotalPrice = -expenditure.TotalPrice
+		expenditure.Price = -expenditure.Price
 		expenditureDetail := r.getExpenditureDetailList(expenditure)
 		expenditureTrans = append(expenditureTrans, expenditureDetail)
 		sumTotal += expenditure.TotalPrice
@@ -640,12 +652,12 @@ func (r *rest) DeleteExpenditureTransaction(c *gin.Context) {
 // @Param page query int false "page"
 // @Param limit query int false "limit"
 // @Param interval_month query int false "interval_month"
-// @Success 200 {object} model.HTTPResponse{data=model.ExpenditureDetailListResponse}
+// @Success 200 {object} model.HTTPResponse{data=model.ProjectLedgerResponse}
 // @Failure 401 {object} model.HTTPResponse{}
 // @Failure 404 {object} model.HTTPResponse{}
 // @Failure 500 {object} model.HTTPResponse{}
-// @Router /v1/project/{project_id}/transaction [GET]
-func (r *rest) GetProjectTransactionList(c *gin.Context) {
+// @Router /v1/project/{project_id}/ledger [GET]
+func (r *rest) GetProjectLedger(c *gin.Context) {
 	ctx := c.Request.Context()
 	var param model.LedgerParam
 
@@ -688,9 +700,9 @@ func (r *rest) GetProjectTransactionList(c *gin.Context) {
 	}
 
 	if err := r.countTransaction(
-		ctx, 
-		project, 
-		&param.TotalElement, 
+		ctx,
+		project,
+		&param.TotalElement,
 		param.IntervalMonth,
 	); err != nil {
 		r.ErrorResponse(c, errors.InternalServerError(err.Error()))

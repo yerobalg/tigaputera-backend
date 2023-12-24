@@ -182,7 +182,8 @@ func (r *rest) getTransaction(ledger model.Ledger) model.InspectorLedgerTransact
 	return model.InspectorLedgerTransaction{
 		Timestamp:     ledger.CreatedAt,
 		Type:          string(ledger.LedgerType),
-		RefName:       *ledger.Description,
+		RefName:       ledger.Ref,
+		ProjectName:   ledger.Project.Name,
 		Amount:        number.ConvertToRupiah(ledger.TotalPrice),
 		InspectorName: ledger.Inspector.Name,
 		RecieptURL:    ledger.ReceiptURL,
@@ -197,6 +198,7 @@ func (r *rest) getAllInspectorLedgerRows(
 	rows, err := r.db.WithContext(ctx).
 		Model(&model.Ledger{}).
 		InnerJoins("Inspector").
+		InnerJoins("Project").
 		Where("ledgers.created_at >= ?", startTime).
 		Limit(int(param.Limit)).
 		Offset(int(param.Offset)).
@@ -233,8 +235,8 @@ func (r *rest) getSingleInspectorLedgerRows(
 ) (*sql.Rows, error) {
 	rows, err := r.db.WithContext(ctx).
 		Model(&model.Ledger{}).
-		InnerJoins("Inspector").
-		Where("ledgers.created_at >= ? AND inspector_id = ?", startTime, inspectorID).
+		InnerJoins("Project").
+		Where("ledgers.created_at >= ? AND ledgers.inspector_id = ?", startTime, inspectorID).
 		Limit(int(param.Limit)).
 		Offset(int(param.Offset)).
 		Order("ledgers.created_at desc").
@@ -312,13 +314,17 @@ func (r *rest) getInspectorLatestLedger(
 	ctx context.Context,
 	inspectorID int64,
 ) (model.Ledger, error) {
-	var latestLedger model.Ledger
+	latestLedger := model.Ledger{
+		FinalInspectorBalance: new(int64),
+	}
 
 	err := r.db.WithContext(ctx).
 		Where("inspector_id = ?", inspectorID).
 		Order("created_at desc").
 		Take(&latestLedger).Error
-	if err != nil {
+	if r.isNoRecordFound(err) {
+		return latestLedger, nil
+	} else if err != nil {
 		return latestLedger, err
 	}
 

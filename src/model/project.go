@@ -50,10 +50,11 @@ type Project struct {
 	CompanyName string  `gorm:"not null;type:varchar(255)" json:"companyName"`
 	Status      string  `gorm:"not null;type:varchar(255)" json:"status"`
 	Budget      *int64  `gorm:"default:0" json:"budget"`
-	StartDate   int64   `gorm:"default:0" json:"startDate"`
-	FinalDate   int64   `gorm:"default:0" json:"finalDate"`
+	StartDate   int64   `gorm:"not null" json:"startDate"`
+	FinalDate   int64   `gorm:"not null" json:"finalDate"`
 	PPN         float64 `gorm:"default:0.11" json:"ppn"`
 	PPH         float64 `gorm:"default:0.015" json:"pph"`
+	Income      *int64  `gorm:"default:0" json:"income"`
 	Volume      *int64  `json:"volume"`
 	Length      *int64  `json:"length"`
 	Width       *int64  `json:"width"`
@@ -114,6 +115,11 @@ type ProjectBudget struct {
 	PPNPercentage float64  `json:"ppnPercentage"`
 	PPHPercentage float64  `json:"pphPercentage"`
 	Total         string   `json:"total"`
+}
+
+type ProjectNameResponse struct {
+	ID   int64  `json:"id"`
+	Name string `json:"name"`
 }
 
 type Budget struct {

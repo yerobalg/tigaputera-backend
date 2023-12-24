@@ -186,6 +186,42 @@ func (r *rest) GetListProject(c *gin.Context) {
 	r.SuccessResponse(c, "Berhasil mendapatkan list proyek", projectListResponses, &param.PaginationParam)
 }
 
+// @Summary Get list project name
+// @Description Get list project name
+// @Tags Project
+// @Produce json
+// @Security BearerAuth
+// @param limit query int false "limit"
+// @param page query int false "page"
+// @param keyword query string false "keyword"
+// @Success 200 {object} model.HTTPResponse{data=[]model.ProjectNameResponse}
+// @Failure 500 {object} model.HTTPResponse{}
+// @Router /v1/project/name [GET]
+func (r *rest) GetListProjectName(c *gin.Context) {
+	ctx := c.Request.Context()
+
+	user := auth.GetUser(ctx)
+
+	queryStmt := "1 = ?"
+	queryArgs := []interface{}{1}
+	if user.Role == string(model.Inspector) {
+		queryStmt += " AND inspector_id = ?"
+		queryArgs = append(queryArgs, user.ID)
+	}
+
+	project := []model.ProjectNameResponse{}
+	if err := r.db.WithContext(ctx).
+		Model(&model.Project{}).
+		Where(queryStmt, queryArgs...).
+		Select("id, name").
+		Find(&project).Error; err != nil {
+		r.ErrorResponse(c, errors.InternalServerError(err.Error()))
+		return
+	}
+
+	r.SuccessResponse(c, "Berhasil mendapatkan list nama proyek", project, nil)
+}
+
 // @Summary Get project
 // @Description Get a project
 // @Tags Project
@@ -278,32 +314,15 @@ func (r *rest) GetProjectDetail(c *gin.Context) {
 		return
 	}
 
-	projectStats, err := r.GetProjectDetailStats(ctx, param.ID, totalBudget)
-	if err != nil {
-		r.ErrorResponse(c, errors.InternalServerError(err.Error()))
-		return
-	}
-
+	projectStats := r.GetProjectDetailStats(ctx, project, totalBudget)
 	margin := totalBudget - totalExpenditure
-	projectDetailResponse := model.ProjectDetailResponse{
-		ID:                 project.ID,
-		Name:               project.Name,
-		Description:        project.Description,
-		Type:               model.GetProjectTypeStyle(project.Type),
-		Status:             model.GetProjectStatusStyle(project.Status),
-		DeptName:           project.DeptName,
-		CompanyName:        project.CompanyName,
-		Volume:             project.Volume,
-		Length:             project.Length,
-		Width:              project.Width,
-		InspectorName:      project.Inspector.Name,
-		StartDate:          project.StartDate,
-		FinalDate:          project.FinalDate,
-		ProjectBudget:      projectBudget,
-		ProjectExpenditure: projectExpenditure,
-		ProjectStatistics:  projectStats,
-		Margin:             number.ConvertToRupiah(margin),
-	}
+	projectDetailResponse := r.getProjectDetailRes(
+		project,
+		projectBudget,
+		projectExpenditure,
+		projectStats,
+		margin,
+	)
 
 	r.SuccessResponse(c, "Berhasil mendapatkan proyek", projectDetailResponse, nil)
 }
@@ -356,26 +375,45 @@ func (r *rest) getProjectExpenditure(
 
 func (r *rest) GetProjectDetailStats(
 	ctx context.Context,
-	projectID int64,
+	project model.Project,
 	totalBudget int64,
-) (model.ProjectStatistics, error) {
-	var projectStats model.ProjectStatistics
-
-	var mqtProjectStats model.MqtProjectStats
-	if err := r.db.WithContext(ctx).
-		Model(&model.MqtProjectStats{}).
-		Where("interval_month = 1 AND project_id = ?", projectID).
-		Take(&mqtProjectStats).Error; err != nil {
-		return projectStats, err
+) model.ProjectStatistics {
+	projectStats := model.ProjectStatistics{
+		TotalIncome:          number.ConvertToRupiah(*project.Income),
+		PercentageFromBudget: number.GetPercentage(*project.Income, totalBudget),
 	}
 
-	incomePercent := number.GetPercentage(*mqtProjectStats.TotalIncome, totalBudget)
-	projectStats = model.ProjectStatistics{
-		TotalIncome:          number.ConvertToRupiah(*mqtProjectStats.TotalIncome),
-		PercentageFromBudget: incomePercent,
+	return projectStats
+}
+
+func (r *rest) getProjectDetailRes(
+	project model.Project,
+	projectBudget model.ProjectBudget,
+	projectExpenditure model.ProjectExpenditureResponse,
+	projectStats model.ProjectStatistics,
+	margin int64,
+) model.ProjectDetailResponse {
+	projectDetailResponse := model.ProjectDetailResponse{
+		ID:                 project.ID,
+		Name:               project.Name,
+		Description:        project.Description,
+		Type:               model.GetProjectTypeStyle(project.Type),
+		Status:             model.GetProjectStatusStyle(project.Status),
+		DeptName:           project.DeptName,
+		CompanyName:        project.CompanyName,
+		Volume:             project.Volume,
+		Length:             project.Length,
+		Width:              project.Width,
+		InspectorName:      project.Inspector.Name,
+		StartDate:          project.StartDate,
+		FinalDate:          project.FinalDate,
+		ProjectBudget:      projectBudget,
+		ProjectExpenditure: projectExpenditure,
+		ProjectStatistics:  projectStats,
+		Margin:             number.ConvertToRupiah(margin),
 	}
 
-	return projectStats, nil
+	return projectDetailResponse
 }
 
 // @Summary Update Project Budget

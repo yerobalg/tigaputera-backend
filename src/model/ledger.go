@@ -68,6 +68,7 @@ type InspectorLedgerTransaction struct {
 	InspectorName string `json:"inspectorName"`
 	Type          string `json:"type"`
 	RefName       string `json:"refName"`
+	ProjectName   string `json:"projectName"`
 	Amount        string `json:"amount"`
 	RecieptURL    string `json:"receiptUrl"`
 }
