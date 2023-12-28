@@ -7,6 +7,7 @@ import (
 	"tigaputera-backend/sdk/file"
 	"tigaputera-backend/sdk/number"
 	"tigaputera-backend/src/model"
+	"gorm.io/gorm"
 
 	"context"
 	"database/sql"
@@ -186,9 +187,9 @@ func (r *rest) insertIncome(
 		return err
 	}
 
-	updateProject := model.Project{
-		Income:    latestLedger.Project.Income,
-		UpdatedBy: latestLedger.Project.UpdatedBy,
+	updateProject := map[string]interface{}{
+		"income":     gorm.Expr("income + ?", incomeTrans.TotalPrice),
+		"updated_by": incomeTrans.InspectorID,
 	}
 
 	if err := tx.Model(&model.Project{}).

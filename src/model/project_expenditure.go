@@ -51,51 +51,19 @@ type CreateProjectExpenditureBody struct {
 var InitialProjectExpenditures = []ProjectExpenditure{
 	{
 		Sequence: 1,
-		Name:     "FE Lokasi",
-	},
-	{
-		Sequence: 2,
-		Name:     "Koordinasi",
-	},
-	{
-		Sequence: 3,
 		Name:     "Operasional",
 	},
 	{
-		Sequence: 4,
+		Sequence: 2,
 		Name:     "Upah Pekerja",
 	},
 	{
-		Sequence: 5,
-		Name:     "Opname",
+		Sequence: 3,
+		Name:     "Fotokopi Berkas + Meterai",
 	},
 	{
-		Sequence: 6,
-		Name:     "PHO",
-	},
-	{
-		Sequence: 7,
-		Name:     "Kontrak",
-	},
-	{
-		Sequence: 8,
-		Name:     "Keuangan",
-	},
-	{
-		Sequence: 9,
-		Name:     "Aset",
-	},
-	{
-		Sequence: 10,
-		Name:     "Fotocopy + Materai",
-	},
-	{
-		Sequence:    11,
+		Sequence:    4,
 		Name:        "BPJS Konstruksi",
 		IsFixedCost: new(bool), // false
-	},
-	{
-		Sequence: 12,
-		Name:     "Operasional Berkas",
 	},
 }
