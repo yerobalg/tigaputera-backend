@@ -1,15 +1,19 @@
 package controller
 
 import (
+	"bytes"
+	"fmt"
 	"os"
 	"time"
 
-	"github.com/gin-gonic/gin"
-	"gorm.io/gorm"
 	"tigaputera-backend/sdk/auth"
 	errors "tigaputera-backend/sdk/error"
 	"tigaputera-backend/sdk/number"
 	"tigaputera-backend/src/model"
+
+	"github.com/gin-gonic/gin"
+	"github.com/xuri/excelize/v2"
+	"gorm.io/gorm"
 )
 
 // @Summary Refresh Statistics
@@ -61,14 +65,6 @@ func (r *rest) RefreshStatistics(c *gin.Context) {
 		r.ErrorResponse(c, errors.InternalServerError(err.Error()))
 	}
 
-	projects := []model.Project{}
-	if err := tx.
-		Find(&projects).
-		Error; err != nil {
-		tx.Rollback()
-		r.ErrorResponse(c, errors.InternalServerError(err.Error()))
-	}
-
 	intervalMonths := []int{1, 3, 6, 12}
 
 	inspectorStats, err := r.getInspectorStats(tx, users, intervalMonths)
@@ -78,20 +74,7 @@ func (r *rest) RefreshStatistics(c *gin.Context) {
 		return
 	}
 
-	projectStats, err := r.getProjectStats(tx, projects)
-	if err != nil {
-		tx.Rollback()
-		r.ErrorResponse(c, errors.InternalServerError(err.Error()))
-		return
-	}
-
 	if err := tx.Create(&inspectorStats).Error; err != nil {
-		tx.Rollback()
-		r.ErrorResponse(c, errors.InternalServerError(err.Error()))
-		return
-	}
-
-	if err := tx.Create(&projectStats).Error; err != nil {
 		tx.Rollback()
 		r.ErrorResponse(c, errors.InternalServerError(err.Error()))
 		return
@@ -704,4 +687,295 @@ func (r *rest) getUserStatsDetailResponse(
 		Income:            number.ConvertToRupiah(*userStats.TotalIncome),
 		Margin:            number.ConvertToRupiah(*userStats.Margin),
 	}
+}
+
+// @Summary Create Ledger Report
+// @Description Create Ledger Report
+// @Tags Statistics
+// @Produce json
+// @Param scheduler-key header string true "scheduler-key"
+// @Success 200 {object} model.HTTPResponse{}
+// @Failure 401 {object} model.HTTPResponse{}
+// @Router /v1/user/statistics/ledger-report [POST]
+func (r *rest) CreateLedgerReport(c *gin.Context) {
+	ctx := c.Request.Context()
+
+	if c.Request.Header.Get("scheduler-key") != os.Getenv("SCHEDULER_KEY") {
+		r.ErrorResponse(c, errors.Unauthorized("scheduler-key tidak valid"))
+		return
+	}
+
+	reportName := []string{
+		"1_month_ledger.xlsx",
+		"3_month_ledger.xlsx",
+		"6_month_ledger.xlsx",
+		"12_month_ledger.xlsx",
+	}
+
+	for _, name := range reportName {
+		// skip if file not exist
+		_ = r.storage.Delete(ctx, name, "report")
+	}
+
+	projects := []model.Project{}
+	if err := r.db.WithContext(ctx).InnerJoins("Inspector").
+		Find(&projects).
+		Error; err != nil {
+		r.ErrorResponse(c, errors.InternalServerError(err.Error()))
+		return
+	}
+
+	intervalMonths := []int{1, 3, 6, 12}
+
+	for _, intervalMonth := range intervalMonths {
+		startDate := time.Now().UTC().AddDate(0, -intervalMonth, 0)
+
+		starDateUnix := time.Date(
+			startDate.Year(),
+			startDate.Month(),
+			startDate.Day(),
+			0,
+			0,
+			0,
+			0,
+			startDate.Location(),
+		).Unix()
+
+		now := time.Now().UTC()
+		currentDateUnix := time.Date(
+			now.Year(),
+			now.Month(),
+			now.Day(),
+			0,
+			0,
+			0,
+			0,
+			now.Location(),
+		).Unix()
+
+		f := excelize.NewFile()
+
+		for _, project := range projects {
+			ledgers := []model.Ledger{}
+			if err := r.db.WithContext(ctx).
+				Where(
+					"project_id = ? AND created_at >= ?",
+					project.ID,
+					starDateUnix,
+				).
+				Order("created_at").
+				Find(&ledgers).
+				Error; err != nil {
+				r.ErrorResponse(c, errors.InternalServerError(err.Error()))
+				return
+			}
+
+			if err := r.createNewSheetsExcel(f, project, ledgers, intervalMonth, currentDateUnix); err != nil {
+				r.ErrorResponse(c, errors.InternalServerError(err.Error()))
+				return
+			}
+		}
+
+		f.DeleteSheet("Sheet1")
+
+		//convert excelize to multipart.File
+		excelBytes, err := f.WriteToBuffer()
+		if err != nil {
+			r.ErrorResponse(c, errors.InternalServerError(err.Error()))
+			return
+		}
+
+		excelReader := bytes.NewReader(excelBytes.Bytes())
+
+		_, err = r.storage.UploadFromBytes(
+			ctx,
+			excelReader,
+			fmt.Sprintf("%d_month_ledger.xlsx", intervalMonth),
+			"ledger_report",
+		);
+
+		if err != nil {
+			r.ErrorResponse(c, errors.InternalServerError(err.Error()))
+			return
+		}
+	}
+
+	r.SuccessResponse(c, "Berhasil membuat laporan buku kas", nil, nil)
+}
+func (r *rest) createNewSheetsExcel(
+	f *excelize.File,
+	project model.Project,
+	projectLedgers []model.Ledger,
+	intervalMonth int,
+	currentTime int64,
+) error {
+	// Create a new sheet.
+	_, err := f.NewSheet(project.Name)
+	if err != nil {
+		return err
+	}
+
+	for i := 1; i <= 9; i++ {
+		col1 := fmt.Sprintf("A%d", i)
+		col2 := fmt.Sprintf("B%d", i)
+		col3 := fmt.Sprintf("C%d", i)
+		col4 := fmt.Sprintf("D%d", i)
+		err := f.MergeCell(project.Name, col1, col2)
+		if err != nil {
+			return err
+		}
+		err = f.MergeCell(project.Name, col3, col4)
+		if err != nil {
+			return err
+		}
+	}
+
+	f.SetCellValue(project.Name, "A1", "Nama Proyek")
+	f.SetCellValue(project.Name, "A2", "Nama Pekerjaan")
+	f.SetCellValue(project.Name, "A3", "Nama Pengawas")
+	f.SetCellValue(project.Name, "A4", "Kategori Proyek")
+	f.SetCellValue(project.Name, "A5", "Status Proyek")
+	f.SetCellValue(project.Name, "A6", "Nama Dinas")
+	f.SetCellValue(project.Name, "A7", "Tanggal Mulai Proyek")
+	f.SetCellValue(project.Name, "A8", "Tanggal Selesai Proyek")
+	f.SetCellValue(project.Name, "A9", "Terakhir Diperbarui")
+
+	f.SetCellValue(project.Name, "C1", project.Name)
+	f.SetCellValue(project.Name, "C2", project.Description)
+	f.SetCellValue(project.Name, "C3", project.Inspector.Username)
+	f.SetCellValue(project.Name, "C4", project.Type)
+	f.SetCellValue(project.Name, "C5", project.Status)
+	f.SetCellValue(project.Name, "C6", project.DeptName)
+	f.SetCellValue(project.Name, "C7", r.convertDateToString(project.StartDate))
+	f.SetCellValue(project.Name, "C8", r.convertDateToString(project.FinalDate))
+	f.SetCellValue(project.Name, "C9", r.convertDateToString(currentTime))
+
+	projectInfostyle, err := f.NewStyle(&excelize.Style{
+		Font: &excelize.Font{
+			Bold: true,
+			Size: 12,
+		},
+	})
+	if err != nil {
+		return err
+	}
+
+	err = f.SetCellStyle(project.Name, "A1", "D9", projectInfostyle)
+	if err != nil {
+		return err
+	}
+
+	ledgerHeaderStyle, err := f.NewStyle(&excelize.Style{
+		Font: &excelize.Font{
+			Bold: true,
+			Size: 12,
+		},
+		Alignment: &excelize.Alignment{
+			Horizontal: "center",
+		},
+		Border: []excelize.Border{
+			{
+				Type:  "left",
+				Color: "#000000",
+			},
+			{
+				Type:  "top",
+				Color: "#000000",
+			},
+			{
+				Type:  "right",
+				Color: "#000000",
+			},
+			{
+				Type:  "bottom",
+				Color: "#000000",
+			},
+		},
+	})
+	if err != nil {
+		return err
+	}
+
+	f.MergeCell(project.Name, "A11", "F11")
+	f.SetCellValue(project.Name, "A11", fmt.Sprintf("BUKU KAS %d BULAN TERAKHIR", intervalMonth))
+	f.SetCellStyle(project.Name, "A11", "F11", ledgerHeaderStyle)
+
+	f.SetCellValue(project.Name, "A12", "No")
+	f.SetCellValue(project.Name, "B12", "Tanggal")
+	f.SetCellValue(project.Name, "C12", "Keterangan")
+	f.SetCellValue(project.Name, "D12", "Debit")
+	f.SetCellValue(project.Name, "E12", "Kredit")
+	f.SetCellValue(project.Name, "F12", "Saldo")
+
+	err = f.SetCellStyle(project.Name, "A12", "F12", ledgerHeaderStyle)
+	if err != nil {
+		return err
+	}
+
+	row := 13
+	for i, ledger := range projectLedgers {
+		row = i + 13
+		var description string
+		if ledger.LedgerType == model.Debit {
+			description = "Pemasukan dari direktur"
+		} else {
+			description = *ledger.Description + " - " + ledger.Ref
+		}
+		f.SetCellValue(project.Name, fmt.Sprintf("A%d", row), i+1)                                          // No
+		f.SetCellValue(project.Name, fmt.Sprintf("B%d", row), r.convertLocalDateToString(ledger.CreatedAt)) // Tanggal
+		f.SetCellValue(project.Name, fmt.Sprintf("C%d", row), description)                                  // Keterangan
+		if ledger.LedgerType == model.Debit {
+			f.SetCellValue(project.Name, fmt.Sprintf("D%d", row), number.ConvertToRupiah(ledger.TotalPrice))
+		} else {
+			f.SetCellValue(project.Name, fmt.Sprintf("E%d", row), number.ConvertToRupiah(-ledger.TotalPrice))
+		}
+		f.SetCellValue(project.Name, fmt.Sprintf("F%d", row), number.ConvertToRupiah(*ledger.FinalProjectBalance))
+	}
+
+	ledgerBodyStyle, err := f.NewStyle(&excelize.Style{
+		Font: &excelize.Font{
+			Size: 12,
+		},
+		Alignment: &excelize.Alignment{
+			Horizontal: "center",
+		},
+		Border: []excelize.Border{
+			{
+				Type:  "left",
+				Color: "#000000",
+			},
+			{
+				Type:  "top",
+				Color: "#000000",
+			},
+			{
+				Type:  "right",
+				Color: "#000000",
+			},
+			{
+				Type:  "bottom",
+				Color: "#000000",
+			},
+		},
+	})
+	if err != nil {
+		return err
+	}
+
+	err = f.SetCellStyle(project.Name, "A12", fmt.Sprintf("F%d", row), ledgerBodyStyle)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (r *rest) convertDateToString(date int64) string {
+	return time.Unix(date, 0).Format("02-01-2006 15:04:05")
+}
+
+func (r *rest) convertLocalDateToString(date int64) string {
+	loc, _ := time.LoadLocation("Asia/Jakarta")
+	jakartaDate := time.Unix(date, 0).In(loc)
+	return jakartaDate.Format("02-01-2006 15:04:05")
 }

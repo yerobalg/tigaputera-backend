@@ -82,6 +82,7 @@ func (r *rest) RegisterMiddlewareAndRoutes() {
 
 	// Protected Routes
 	r.http.PUT("/v1/user/statistics/refresh", r.RefreshStatistics)
+	r.http.POST("/v1/user/statistics/ledger-report", r.CreateLedgerReport)
 	v1 := r.http.Group("v1", r.Authorization())
 
 	// User routes

@@ -1,9 +1,11 @@
 package storage
 
 import (
+	"bytes"
+	"tigaputera-backend/sdk/file"
+
 	"cloud.google.com/go/storage"
 	"google.golang.org/api/option"
-	"tigaputera-backend/sdk/file"
 
 	"context"
 	"encoding/json"
@@ -34,6 +36,7 @@ type storageLib struct {
 
 type Interface interface {
 	Upload(ctx context.Context, file *file.File, path string) (string, error)
+	UploadFromBytes(ctx context.Context, file *bytes.Reader, fileName string, path string) (string, error)
 	Delete(ctx context.Context, path string, fileName string) error
 	getObjectPlace(objectPath string) *storage.ObjectHandle
 }
@@ -87,6 +90,38 @@ func (s *storageLib) Upload(
 		s.BucketName,
 		path,
 		file.Meta.Filename,
+	))
+	if err != nil {
+		return imageURL, err
+	}
+
+	imageURL = parsedURL.String()
+
+	return imageURL, nil
+}
+
+func (s *storageLib) UploadFromBytes(
+	ctx context.Context,
+	file *bytes.Reader,
+	fileName string,
+	path string,
+) (string, error) {
+	var imageURL string
+	writer := s.getObjectPlace(path + "/" + fileName).NewWriter(ctx)
+
+	if _, err := io.Copy(writer, file); err != nil {
+		return imageURL, err
+	}
+
+	if err := writer.Close(); err != nil {
+		return imageURL, err
+	}
+
+	parsedURL, err := url.Parse(fmt.Sprintf(
+		"https://storage.googleapis.com/%s/%s/%s",
+		s.BucketName,
+		path,
+		fileName,
 	))
 	if err != nil {
 		return imageURL, err
